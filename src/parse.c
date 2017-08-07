@@ -196,6 +196,9 @@ parse_config(struct parser *parser)
            (parser_check(parser, Token_Key))) {
             current_hotkey->next = parse_hotkey(parser);
             current_hotkey = current_hotkey->next;
+            if(parser->error) {
+                return NULL;
+            }
         } else {
             fprintf(stderr, "(#%d:%d) expected token 'Token_Modifier', 'Token_Key_Hex' or 'Token_Key', but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
