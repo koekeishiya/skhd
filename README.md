@@ -14,7 +14,7 @@
 | emit keypress              | [ ]  | [x] |
 | autowrite text             | [ ]  | [x] |
 
-#### Install
+### Install
 
 The first time **skhd** is ran, it will request access to the accessibility API.
 
@@ -29,7 +29,7 @@ Requires xcode-8 command-line tools,
       make install      # release version
       make              # debug version
 
-#### Usage
+### Usage
 
 ```
 -v | --version: Print version number to stdout
@@ -40,7 +40,7 @@ Requires xcode-8 command-line tools,
 
 ```
 
-#### Configuration
+### Configuration
 
 **skhd** will load the configuration file `$HOME/.skhdrc`, unless otherwise specified.
 
