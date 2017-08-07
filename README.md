@@ -44,4 +44,6 @@ Requires xcode-8 command-line tools,
 
 **skhd** will load the configuration file `$HOME/.skhdrc`, unless otherwise specified.
 
+A list of all built-in modifier and literal keywords can be found [here](https://github.com/koekeishiya/skhd/issues/1)
+
 See [sample config](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc) for syntax information.
