@@ -111,6 +111,28 @@ uint32_t keycode_from_literal(char *key, unsigned length)
         return kVK_DownArrow;
     } else if(same_string(key, length, "f1")) {
         return kVK_F1;
+    } else if(same_string(key, length, "f2")) {
+        return kVK_F2;
+    } else if(same_string(key, length, "f3")) {
+        return kVK_F3;
+    } else if(same_string(key, length, "f4")) {
+        return kVK_F4;
+    } else if(same_string(key, length, "f5")) {
+        return kVK_F5;
+    } else if(same_string(key, length, "f6")) {
+        return kVK_F6;
+    } else if(same_string(key, length, "f7")) {
+        return kVK_F7;
+    } else if(same_string(key, length, "f8")) {
+        return kVK_F8;
+    } else if(same_string(key, length, "f9")) {
+        return kVK_F9;
+    } else if(same_string(key, length, "f10")) {
+        return kVK_F10;
+    } else if(same_string(key, length, "f11")) {
+        return kVK_F11;
+    } else if(same_string(key, length, "f12")) {
+        return kVK_F12;
     } else {
         return 0;
     }
