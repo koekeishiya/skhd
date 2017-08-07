@@ -60,6 +60,8 @@ Requires xcode-8 command-line tools,
 
 **skhd** will load the configuration file `$HOME/.skhdrc`, unless otherwise specified.
 
+A sample config is available [here](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc)
+
 A list of all built-in modifier and literal keywords can be found [here](https://github.com/koekeishiya/skhd/issues/1)
 
 A hotkey is written according to the following rules:
