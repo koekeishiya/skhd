@@ -1,6 +1,11 @@
 **skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd**](https://github.com/koekeishiya/khd)
 (although mostly rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 
+**skhd** has an improved parser that is able to accurately identify both the line and character position of any symbol that does not
+follow the correct grammar rules for defining a hotkey. If a syntax error is detected during parsing, the parser will print the error and abort.
+**skhd** will still continue to run and when the syntax error has been fixed, it will automatically reload and reparse the config file.
+
+feature comparison between **skhd** and **khd**
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
 | hotload config file        | [x]  | [ ] |
