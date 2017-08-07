@@ -16,9 +16,7 @@
 #
 #                       keycode  = 'apple keyboard kVK_<Key> values (0x3C)'
 #
-#                       ->       = optional operator '->' marks this bind as passthrough.
-#                                  this causes the key to be passed through to the system,
-#                                  instead of being consumed.
+#                       ->       = keypress is not consumed by skhd
 #
 #                       command  = command is executed through '$SHELL -c' and
 #                                  follows valid shell syntax. if the $SHELL environment
