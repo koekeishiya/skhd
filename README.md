@@ -62,4 +62,31 @@ Requires xcode-8 command-line tools,
 
 A list of all built-in modifier and literal keywords can be found [here](https://github.com/koekeishiya/skhd/issues/1)
 
-See [sample config](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc) for syntax information.
+A hotkey is written according to the following rules:
+```
+hotkey   = <keysym> ':' <command> |
+           <keysym> '->' ':' <command>
+
+keysym   = <mod> '-' <key> | <key>
+
+mod      = 'built-in mod keyword' | <mod> '+' <mod>
+
+key      = <literal> | <keycode>
+
+literal  = 'single letter or built-in keyword'
+
+keycode  = 'apple keyboard kVK_<Key> values (0x3C)'
+
+->       = keypress is not consumed by skhd
+
+command  = command is executed through '$SHELL -c' and
+           follows valid shell syntax. if the $SHELL environment
+           variable is not set, it will default to '/bin/bash'.
+           when bash is used, the ';' delimeter can be specified
+           to chain commands.
+
+           to allow a command to extend into multiple lines,
+           prepend '\' at the end of the previous line.
+
+           an EOL character signifies the end of the bind.
+```
