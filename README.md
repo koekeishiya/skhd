@@ -6,6 +6,7 @@ follow the correct grammar rules for defining a hotkey. If a syntax error is det
 **skhd** will still continue to run and when the syntax error has been fixed, it will automatically reload and reparse the config file.
 
 feature comparison between **skhd** and **khd**
+
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
 | hotload config file        | [x]  | [ ] |
