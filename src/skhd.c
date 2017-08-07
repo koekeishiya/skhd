@@ -28,7 +28,7 @@ extern bool CGSIsSecureEventInputSet();
 
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
-internal unsigned patch_version = 1;
+internal unsigned patch_version = 2;
 internal char *config_file;
 struct hotkey *hotkeys;
 
