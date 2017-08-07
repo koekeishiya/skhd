@@ -30,6 +30,14 @@ After access has been granted, the application must be restarted.
 
 *Secure Keyboard Entry* must be disabled for **skhd** to receive key-events.
 
+**Homebrew**:
+
+      brew install koekeishiya/formulae/skhd
+      brew services start skhd
+
+      stdout -> /tmp/skhd.out
+      stderr -> /tmp/skhd.err
+
 **Source**:
 
 Requires xcode-8 command-line tools,
