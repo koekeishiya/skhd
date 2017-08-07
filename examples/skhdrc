@@ -1,7 +1,7 @@
 ## NOTE(koekeishiya): A hotkey is written according to the following rules:
 #
-#                       hotkey     = <keysym> ':' <command> |
-#                                    <keysym> '->' ':' <command>
+#                       hotkey   = <keysym> ':' <command> |
+#                                  <keysym> '->' ':' <command>
 #
 #                       keysym   = <mod> '-' <key> | <key>
 #
