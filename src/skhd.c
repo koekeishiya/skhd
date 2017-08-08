@@ -91,6 +91,17 @@ internal HOTLOADER_CALLBACK(hotloader_handler)
     }
 }
 
+#ifdef 0
+#define BEGIN_TIMED_BLOCK() \
+    clock_t timed_block_begin = clock()
+#define END_TIMED_BLOCK() \
+    clock_t timed_block_end = clock(); \
+    double timed_block_elapsed = (timed_block_end -timed_block_begin) / (double)CLOCKS_PER_SEC; \
+    printf("elapsed time: %f\n", timed_block_elapsed)
+#endif
+
+
+
 internal EVENT_TAP_CALLBACK(key_handler)
 {
     switch(type)
@@ -108,7 +119,8 @@ internal EVENT_TAP_CALLBACK(key_handler)
             uint32_t key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
             struct hotkey eventkey = { .flags = 0, .key = key };
             cgeventflags_to_hotkeyflags(flags, &eventkey);
-            if(find_and_exec_hotkey(&eventkey, &hotkey_map)) {
+            bool result = find_and_exec_hotkey(&eventkey, &hotkey_map);
+            if(result) {
                 return NULL;
             }
         } break;
