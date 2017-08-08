@@ -15,10 +15,12 @@ feature comparison between **skhd** and **khd**
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
 | hotload config file        | [x]  | [ ] |
+| store hotkey in hashmap    | [x]  | [ ] |
+| store hotkey in linked-list| [ ]  | [x] |
 | require unix domain socket | [ ]  | [x] |
 | hotkey passthrough         | [x]  | [x] |
 | modal hotkey-system        | [ ]  | [x] |
-| app specific hotkey        | [ ]  | [x] |
+| application specific hotkey| [ ]  | [x] |
 | modifier only hotkey       | [ ]  | [x] |
 | caps-lock as hotkey        | [ ]  | [x] |
 | mouse-buttons as hotkey    | [ ]  | [x] |
