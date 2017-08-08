@@ -91,7 +91,7 @@ internal HOTLOADER_CALLBACK(hotloader_handler)
     }
 }
 
-#ifdef 0
+#if 0
 #define BEGIN_TIMED_BLOCK() \
     clock_t timed_block_begin = clock()
 #define END_TIMED_BLOCK() \
