@@ -8,6 +8,9 @@
 
 #include <Carbon/Carbon.h>
 
+#define HASHTABLE_IMPLEMENTATION
+#include "hashtable.h"
+
 #include "hotload.h"
 #include "event_tap.h"
 #include "locale.h"
@@ -29,7 +32,7 @@ extern bool CGSIsSecureEventInputSet();
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
 internal unsigned patch_version = 4;
-internal struct hotkey *hotkeys;
+internal struct table hotkey_map;
 internal char *config_file;
 
 internal void
@@ -77,8 +80,11 @@ internal HOTLOADER_CALLBACK(hotloader_handler)
              * Filter the duplicated event or something ?? */
             struct parser parser;
             if(parser_init(&parser, absolutepath)) {
-                free_hotkeys(hotkeys);
-                hotkeys = parse_config(&parser);
+                free_hotkeys(&hotkey_map);
+                parse_config(&parser, &hotkey_map);
+                if(parser.error) {
+                    free_hotkeys(&hotkey_map);
+                }
                 parser_destroy(&parser);
             }
         }
@@ -100,8 +106,9 @@ internal EVENT_TAP_CALLBACK(key_handler)
         {
             uint32_t flags = CGEventGetFlags(event);
             uint32_t key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
-            struct hotkey eventkey = cgevent_to_hotkey(flags, key);
-            if(find_and_exec_hotkey(&eventkey, hotkeys)) {
+            struct hotkey eventkey = { .flags = 0, .key = key };
+            cgeventflags_to_hotkeyflags(flags, &eventkey);
+            if(find_and_exec_hotkey(&eventkey, &hotkey_map)) {
                 return NULL;
             }
         } break;
@@ -194,9 +201,17 @@ int main(int argc, char **argv)
     set_config_path();
     printf("skhd: using config '%s'\n", config_file);
 
+    table_init(&hotkey_map,
+               128,
+               (table_hash_func) hash_hotkey,
+               (table_compare_func) same_hotkey);
+
     struct parser parser;
     if(parser_init(&parser, config_file)) {
-        hotkeys = parse_config(&parser);
+        parse_config(&parser, &hotkey_map);
+        if(parser.error) {
+            free_hotkeys(&hotkey_map);
+        }
         parser_destroy(&parser);
     } else {
         error("skhd: could not open file '%s'\n", config_file);

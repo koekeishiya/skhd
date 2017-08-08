@@ -12,7 +12,8 @@ struct parser
     bool error;
 };
 
-struct hotkey *parse_config(struct parser *parser);
+struct table;
+void parse_config(struct parser *parser, struct table *hotkey_map);
 
 struct token parser_peek(struct parser *parser);
 struct token parser_previous(struct parser *parser);

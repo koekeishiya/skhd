@@ -2,6 +2,7 @@
 #include "tokenize.h"
 #include "locale.h"
 #include "hotkey.h"
+#include "hashtable.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -180,35 +181,30 @@ parse_hotkey(struct parser *parser)
 
     printf("}\n");
 
-    hotkey->next = NULL;
     return hotkey;
 }
 
-struct hotkey *
-parse_config(struct parser *parser)
+void parse_config(struct parser *parser, struct table *hotkey_map)
 {
-    struct hotkey hotkeys;
-    struct hotkey *current_hotkey = &hotkeys;
-
+    struct hotkey *hotkey;
     while(!parser_eof(parser)) {
         if((parser_check(parser, Token_Modifier)) ||
            (parser_check(parser, Token_Key_Hex)) ||
            (parser_check(parser, Token_Key))) {
-            current_hotkey->next = parse_hotkey(parser);
-            current_hotkey = current_hotkey->next;
+            hotkey = parse_hotkey(parser);
+            table_add(hotkey_map, hotkey, hotkey);
             if(parser->error) {
-                return NULL;
+                free_hotkeys(hotkey_map);
+                return;
             }
         } else {
             fprintf(stderr, "(#%d:%d) expected token 'Token_Modifier', 'Token_Key_Hex' or 'Token_Key', but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
                     parser->current_token.length, parser->current_token.text);
             parser->error = true;
-            return NULL;
+            return;
         }
     }
-
-    return hotkeys.next;
 }
 
 struct token

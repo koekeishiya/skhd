@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define internal static
-
 enum osx_event_mask
 {
     Event_Mask_Alt = 0x00080000,
@@ -52,30 +50,31 @@ struct hotkey
     uint32_t flags;
     uint32_t key;
     char *command;
-    struct hotkey *next;
 };
 
-internal inline void
+static inline void
 add_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags |= flag;
 }
 
-internal inline bool
+static inline bool
 has_flags(struct hotkey *hotkey, uint32_t flag)
 {
     bool result = hotkey->flags & flag;
     return result;
 }
 
-internal inline void
+static inline void
 clear_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags &= ~flag;
 }
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct hotkey *hotkeys);
-struct hotkey cgevent_to_hotkey(CGEventFlags flags, uint32_t key);
-void free_hotkeys(struct hotkey *hotkeys);
+bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map);
+void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey);
+
+struct table;
+void free_hotkeys(struct table *hotkey_map);
 
 #endif
