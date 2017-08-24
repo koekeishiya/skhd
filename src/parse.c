@@ -64,7 +64,7 @@ parse_key_hex(struct parser *parser)
     char *hex = copy_string_count(key.text, key.length);
     uint32_t keycode = keycode_from_hex(hex);
     free(hex);
-    printf("\tkey: '%.*s' (%d)\n", key.length, key.text, keycode);
+    printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
     return keycode;
 }
 
@@ -78,7 +78,7 @@ parse_key(struct parser *parser)
     } else {
         keycode = keycode_from_literal(key.text, key.length);
     }
-    printf("\tkey: '%.*s' (%d)\n", key.length, key.text, keycode);
+    printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
     return keycode;
 }
 
