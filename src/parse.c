@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define internal static
 
@@ -29,6 +30,12 @@ read_file(const char *file)
     }
 
     return buffer;
+}
+
+internal inline bool
+same_string(char *text, unsigned length, const char *match)
+{
+    return strncmp(text, match, length) == 0;
 }
 
 internal char *
@@ -73,22 +80,45 @@ parse_key(struct parser *parser)
 {
     uint32_t keycode;
     struct token key = parser_previous(parser);
-    if(key.length == 1) {
-        keycode = keycode_from_char(*key.text);
-    } else {
-        keycode = keycode_from_literal(key.text, key.length);
-    }
+    keycode = keycode_from_char(*key.text);
     printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
     return keycode;
 }
 
-internal const char *modifier_flags_map[] =
+internal uint32_t literal_keycode_value[] =
 {
-    "alt",   "lalt",    "ralt",
-    "shift", "lshift",  "rshift",
-    "cmd",   "lcmd",    "rcmd",
-    "ctrl",  "lctrl",   "rctrl",
+    kVK_Return,     kVK_Tab,           kVK_Space,
+    kVK_Delete,     kVK_ForwardDelete, kVK_Escape,
+    kVK_Home,       kVK_End,           kVK_PageUp,
+    kVK_PageDown,   kVK_Help,          kVK_LeftArrow,
+    kVK_RightArrow, kVK_UpArrow,       kVK_DownArrow,
+    kVK_F1,         kVK_F2,            kVK_F3,
+    kVK_F4,         kVK_F5,            kVK_F6,
+    kVK_F7,         kVK_F8,            kVK_F9,
+    kVK_F10,        kVK_F11,           kVK_F12,
+    kVK_F13,        kVK_F14,           kVK_F15,
+    kVK_F16,        kVK_F17,           kVK_F18,
+    kVK_F19,        kVK_F20,
 };
+
+internal uint32_t
+parse_key_literal(struct parser *parser)
+{
+    uint32_t keycode = 0;
+    struct token key = parser_previous(parser);
+
+    // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
+    for(int i = 0; i < array_count(literal_keycode_str); ++i) {
+        if(same_string(key.text, key.length, literal_keycode_str[i])) {
+            keycode = literal_keycode_value[i];
+            printf("\tkey: '%.*s' (%d)\n", key.length, key.text, keycode);
+            break;
+        }
+    }
+
+    return keycode;
+}
+
 internal enum hotkey_flag modifier_flags_value[] =
 {
     Hotkey_Flag_Alt,        Hotkey_Flag_LAlt,       Hotkey_Flag_RAlt,
@@ -103,10 +133,11 @@ parse_modifier(struct parser *parser)
     uint32_t flags = 0;
     struct token modifier = parser_previous(parser);
 
-    for(int i = 0; i < array_count(modifier_flags_map); ++i) {
-        if(same_string(modifier.text, modifier.length, modifier_flags_map[i])) {
+    // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
+    for(int i = 0; i < array_count(modifier_flags_str); ++i) {
+        if(same_string(modifier.text, modifier.length, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
-            printf("\tmod: '%s'\n", modifier_flags_map[i]);
+            printf("\tmod: '%s'\n", modifier_flags_str[i]);
             break;
         }
     }
@@ -115,7 +146,7 @@ parse_modifier(struct parser *parser)
         if(parser_match(parser, Token_Modifier)) {
             flags |= parse_modifier(parser);
         } else {
-            fprintf(stderr, "(#%d:%d) expected token 'Token_Modifier', but got '%.*s'\n",
+            fprintf(stderr, "(#%d:%d) expected modifier, but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
                     parser->current_token.length, parser->current_token.text);
             parser->error = true;
@@ -145,7 +176,7 @@ parse_hotkey(struct parser *parser)
 
     if(found_modifier) {
         if(!parser_match(parser, Token_Dash)) {
-            fprintf(stderr, "(#%d:%d) expected token '-', but got '%.*s'\n",
+            fprintf(stderr, "(#%d:%d) expected '-', but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
                     parser->current_token.length, parser->current_token.text);
             parser->error = true;
@@ -157,8 +188,10 @@ parse_hotkey(struct parser *parser)
         hotkey->key = parse_key(parser);
     } else if(parser_match(parser, Token_Key_Hex)) {
         hotkey->key = parse_key_hex(parser);
+    } else if(parser_match(parser, Token_Literal)) {
+        hotkey->key = parse_key_literal(parser);
     } else {
-        fprintf(stderr, "(#%d:%d) expected token 'Token_Key', but got '%.*s'\n",
+        fprintf(stderr, "(#%d:%d) expected key-literal, but got '%.*s'\n",
                 parser->current_token.line, parser->current_token.cursor,
                 parser->current_token.length, parser->current_token.text);
         parser->error = true;
@@ -172,7 +205,7 @@ parse_hotkey(struct parser *parser)
     if(parser_match(parser, Token_Command)) {
         hotkey->command = parse_command(parser);
     } else {
-        fprintf(stderr, "(#%d:%d) expected token 'Token_Command', but got '%.*s'\n",
+        fprintf(stderr, "(#%d:%d) expected ':' followed by command, but got '%.*s'\n",
                 parser->current_token.line, parser->current_token.cursor,
                 parser->current_token.length, parser->current_token.text);
         parser->error = true;
@@ -189,6 +222,7 @@ void parse_config(struct parser *parser, struct table *hotkey_map)
     struct hotkey *hotkey;
     while(!parser_eof(parser)) {
         if((parser_check(parser, Token_Modifier)) ||
+           (parser_check(parser, Token_Literal)) ||
            (parser_check(parser, Token_Key_Hex)) ||
            (parser_check(parser, Token_Key))) {
             hotkey = parse_hotkey(parser);
@@ -198,7 +232,7 @@ void parse_config(struct parser *parser, struct table *hotkey_map)
             }
             table_add(hotkey_map, hotkey, hotkey);
         } else {
-            fprintf(stderr, "(#%d:%d) expected token 'Token_Modifier', 'Token_Key_Hex' or 'Token_Key', but got '%.*s'\n",
+            fprintf(stderr, "(#%d:%d) expected modifier or key-literal, but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
                     parser->current_token.length, parser->current_token.text);
             parser->error = true;

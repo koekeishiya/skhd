@@ -1,6 +1,8 @@
 #include "tokenize.h"
 #define internal static
 
+#include <ctype.h>
+
 internal int
 token_equals(struct token token, const char *match)
 {
@@ -81,15 +83,15 @@ resolve_identifier_type(struct token token)
         return Token_Key;
     }
 
-    for(int i = 0; i < array_count(token_modifier_map); ++i) {
-        if(token_equals(token, token_modifier_map[i])) {
+    for(int i = 0; i < array_count(modifier_flags_str); ++i) {
+        if(token_equals(token, modifier_flags_str[i])) {
             return Token_Modifier;
         }
     }
 
-    for(int i = 0; i < array_count(token_key_map); ++i) {
-        if(token_equals(token, token_key_map[i])) {
-            return Token_Key;
+    for(int i = 0; i < array_count(literal_keycode_str); ++i) {
+        if(token_equals(token, literal_keycode_str[i])) {
+            return Token_Literal;
         }
     }
 
