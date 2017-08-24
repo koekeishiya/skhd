@@ -192,11 +192,11 @@ void parse_config(struct parser *parser, struct table *hotkey_map)
            (parser_check(parser, Token_Key_Hex)) ||
            (parser_check(parser, Token_Key))) {
             hotkey = parse_hotkey(parser);
-            table_add(hotkey_map, hotkey, hotkey);
             if(parser->error) {
                 free_hotkeys(hotkey_map);
                 return;
             }
+            table_add(hotkey_map, hotkey, hotkey);
         } else {
             fprintf(stderr, "(#%d:%d) expected token 'Token_Modifier', 'Token_Key_Hex' or 'Token_Key', but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
