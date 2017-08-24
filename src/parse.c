@@ -104,14 +104,14 @@ internal uint32_t literal_keycode_value[] =
 internal uint32_t
 parse_key_literal(struct parser *parser)
 {
-    uint32_t keycode = 0;
+    uint32_t keycode;
     struct token key = parser_previous(parser);
 
     // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
     for(int i = 0; i < array_count(literal_keycode_str); ++i) {
         if(same_string(key.text, key.length, literal_keycode_str[i])) {
             keycode = literal_keycode_value[i];
-            printf("\tkey: '%.*s' (%d)\n", key.length, key.text, keycode);
+            printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
             break;
         }
     }
