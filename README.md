@@ -1,5 +1,5 @@
 **skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd**](https://github.com/koekeishiya/khd)
-(although mostly rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
+(although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 
 **skhd** uses a subset of the grammar that **khd** uses. In other words, **khd** is able to load and run **skhd** config files without having
 to make any changes to the file. This makes it very simple to migrate between **skhd** and **khd** on demand.
