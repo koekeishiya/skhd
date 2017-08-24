@@ -5,6 +5,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <Carbon/Carbon.h>
 
@@ -199,6 +200,10 @@ int main(int argc, char **argv)
 {
     if(parse_arguments(argc, argv)) {
         return EXIT_SUCCESS;
+    }
+
+    if(getuid() == 0 || geteuid() == 0) {
+        error("skhd: running as root is not allowed! abort..\n");
     }
 
     if(secure_keyboard_entry_enabled()) {
