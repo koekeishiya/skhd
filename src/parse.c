@@ -32,12 +32,6 @@ read_file(const char *file)
     return buffer;
 }
 
-internal inline bool
-same_string(char *text, unsigned length, const char *match)
-{
-    return strncmp(text, match, length) == 0;
-}
-
 internal char *
 copy_string_count(char *s, int length)
 {
@@ -109,7 +103,7 @@ parse_key_literal(struct parser *parser)
 
     // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
     for(int i = 0; i < array_count(literal_keycode_str); ++i) {
-        if(same_string(key.text, key.length, literal_keycode_str[i])) {
+        if(token_equals(key, literal_keycode_str[i])) {
             keycode = literal_keycode_value[i];
             printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
             break;
@@ -135,7 +129,7 @@ parse_modifier(struct parser *parser)
 
     // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
     for(int i = 0; i < array_count(modifier_flags_str); ++i) {
-        if(same_string(modifier.text, modifier.length, modifier_flags_str[i])) {
+        if(token_equals(modifier, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
             printf("\tmod: '%s'\n", modifier_flags_str[i]);
             break;

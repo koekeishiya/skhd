@@ -7,9 +7,12 @@ internal int
 token_equals(struct token token, const char *match)
 {
     const char *at = match;
-    unsigned index = 0;
-    while(*at++ == token.text[index++] && index < token.length);
-    return (*at == '\0' && index == token.length) ? 1 : 0;
+    for(int i = 0; i < token.length; ++i, ++at) {
+        if((*at == 0) || (token.text[i] != *at)) {
+            return false;
+        }
+    }
+    return (*at == 0);
 }
 
 internal void
