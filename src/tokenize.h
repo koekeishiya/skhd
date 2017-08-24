@@ -63,5 +63,6 @@ struct tokenizer
 void tokenizer_init(struct tokenizer *tokenizer, char *buffer);
 struct token get_token(struct tokenizer *tokenizer);
 struct token peek_token(struct tokenizer tokenizer);
+int token_equals(struct token token, const char *match);
 
 #endif

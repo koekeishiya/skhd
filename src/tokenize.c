@@ -3,8 +3,7 @@
 
 #include <ctype.h>
 
-internal int
-token_equals(struct token token, const char *match)
+int token_equals(struct token token, const char *match)
 {
     const char *at = match;
     for(int i = 0; i < token.length; ++i, ++at) {
