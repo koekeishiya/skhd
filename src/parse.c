@@ -75,7 +75,7 @@ parse_key(struct parser *parser)
     uint32_t keycode;
     struct token key = parser_previous(parser);
     keycode = keycode_from_char(*key.text);
-    printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
+    printf("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
     return keycode;
 }
 
@@ -95,6 +95,10 @@ internal uint32_t literal_keycode_value[] =
     kVK_F19,        kVK_F20,
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsometimes-uninitialized"
+// NOTE(koekeishiya): shut up compiler !!!
+// if we get to this point, we already KNOW that the input it valid..
 internal uint32_t
 parse_key_literal(struct parser *parser)
 {
@@ -112,6 +116,7 @@ parse_key_literal(struct parser *parser)
 
     return keycode;
 }
+#pragma clang diagnostic pop
 
 internal enum hotkey_flag modifier_flags_value[] =
 {

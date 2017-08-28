@@ -1,6 +1,6 @@
 FRAMEWORKS     = -framework Carbon
 BUILD_PATH     = ./bin
-BUILD_FLAGS    = -std=c99 -Wall -g
+BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c
 BINS           = $(BUILD_PATH)/skhd
 

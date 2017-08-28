@@ -46,6 +46,8 @@ cfstring_from_keycode(CGKeyCode keycode)
     return NULL;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
 uint32_t keycode_from_char(char key)
 {
     uint32_t keycode = 0;
@@ -68,3 +70,4 @@ uint32_t keycode_from_char(char key)
 
     return keycode;
 }
+#pragma clang diagnostic pop
