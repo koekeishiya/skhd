@@ -37,6 +37,8 @@ After access has been granted, the application must be restarted.
 
 **Homebrew**:
 
+Requires xcode-8 command-line tools,
+
       brew install koekeishiya/formulae/skhd
       brew services start skhd
 
