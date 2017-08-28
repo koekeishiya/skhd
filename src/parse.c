@@ -98,7 +98,7 @@ internal uint32_t literal_keycode_value[] =
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsometimes-uninitialized"
 // NOTE(koekeishiya): shut up compiler !!!
-// if we get to this point, we already KNOW that the input it valid..
+// if we get to this point, we already KNOW that the input is valid..
 internal uint32_t
 parse_key_literal(struct parser *parser)
 {
