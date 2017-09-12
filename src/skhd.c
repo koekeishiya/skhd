@@ -76,19 +76,10 @@ parse_config_helper(char *absolutepath)
     }
 }
 
-internal HOTLOADER_CALLBACK(hotloader_handler)
+internal HOTLOADER_CALLBACK(config_handler)
 {
-    /* NOTE(koekeishiya): We sometimes get two events upon file save. */
-    struct hotloader *hotloader = (struct hotloader *) context;
-    char **files = (char **) paths;
-
-    for(unsigned index = 0; index < count; ++index) {
-        char *absolutepath = files[index];
-        if(hotloader_watched_file(hotloader, absolutepath)) {
-            free_hotkeys(&hotkey_map);
-            parse_config_helper(absolutepath);
-        }
-    }
+    free_hotkeys(&hotkey_map);
+    parse_config_helper(absolutepath);
 }
 
 internal EVENT_TAP_CALLBACK(key_handler)
@@ -210,7 +201,7 @@ int main(int argc, char **argv)
 
     struct hotloader hotloader = {};
     hotloader_add_file(&hotloader, config_file);
-    hotloader_begin(&hotloader, hotloader_handler);
+    hotloader_begin(&hotloader, config_handler);
 
     CFRunLoopRun();
 

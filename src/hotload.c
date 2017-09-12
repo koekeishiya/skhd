@@ -6,6 +6,13 @@
 
 #define internal static
 
+#define FSEVENT_CALLBACK(name) void name(ConstFSEventStreamRef stream,\
+                                         void *context,\
+                                         size_t count,\
+                                         void *paths,\
+                                         const FSEventStreamEventFlags *flags,\
+                                         const FSEventStreamEventId *ids)
+
 internal char *
 copy_string(const char *s)
 {
@@ -34,18 +41,19 @@ file_name(const char *file)
     return name;
 }
 
-bool hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
+internal struct watch_info *
+hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
 {
-    bool success = false;
-    for(unsigned index = 0; success == 0 && index < hotloader->watch_count; ++index) {
-        struct watched_file *watch_info = &hotloader->watch_list[index];
+    struct watch_info *result = NULL;
+    for(unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
+        struct watched_file *watch_info = hotloader->watch_list + index;
 
         char *directory = file_directory(absolutepath);
         char *filename = file_name(absolutepath);
 
         if(strcmp(watch_info->directory, directory) == 0) {
             if(strcmp(watch_info->filename, filename) == 0) {
-                success = true;
+                result = watch_info;
             }
         }
 
@@ -53,7 +61,22 @@ bool hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
         free(directory);
     }
 
-    return success;
+    return result;
+}
+
+internal FSEVENT_CALLBACK(hotloader_handler)
+{
+    /* NOTE(koekeishiya): We sometimes get two events upon file save. */
+    struct hotloader *hotloader = (struct hotloader *) context;
+    char **files = (char **) paths;
+
+    struct watched_file *watch_info;
+    for(unsigned index = 0; index < count; ++index) {
+        char *absolutepath = files[index];
+        if((watch_info = hotloader_watched_file(hotloader, absolutepath))) {
+            hotloader->callback(absolutepath, watch_info->directory, watch_info->filename);
+        }
+    }
 }
 
 void hotloader_add_file(struct hotloader *hotloader, const char *file)
@@ -85,10 +108,11 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
     context.info = (void *) hotloader;
 
     hotloader->enabled = true;
+    hotloader->callback = callback;
     hotloader->path = (CFArrayRef) CFArrayCreate(NULL, (const void **) string_refs, hotloader->watch_count, &kCFTypeArrayCallBacks);
     hotloader->flags = kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents;
     hotloader->stream = FSEventStreamCreate(NULL,
-                                            callback,
+                                            hotloader_handler,
                                             &context,
                                             hotloader->path,
                                             kFSEventStreamEventIdSinceNow,
