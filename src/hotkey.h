@@ -71,6 +71,9 @@ clear_flags(struct hotkey *hotkey, uint32_t flag)
     hotkey->flags &= ~flag;
 }
 
+bool same_hotkey(struct hotkey *a, struct hotkey *b);
+unsigned long hash_hotkey(struct hotkey *a);
+
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map);
 void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey);
 

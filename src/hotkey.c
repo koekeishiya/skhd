@@ -86,8 +86,7 @@ compare_ctrl(struct hotkey *a, struct hotkey *b)
     }
 }
 
-internal inline bool
-same_hotkey(struct hotkey *a, struct hotkey *b)
+bool same_hotkey(struct hotkey *a, struct hotkey *b)
 {
     if(a && b) {
         return compare_cmd(a, b) &&
