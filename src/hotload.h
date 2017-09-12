@@ -31,9 +31,8 @@ struct hotloader
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback);
 void hotloader_end(struct hotloader *hotloader);
-void hotloader_add_file(struct hotloader *hotloader, const char *file);
 
-char *file_directory(const char *file);
-char *file_name(const char *file);
+void hotloader_add_file(struct hotloader *hotloader, const char *file);
+bool hotloader_watched_file(struct hotloader *hotloader, char *absolutepath);
 
 #endif

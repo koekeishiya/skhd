@@ -16,7 +16,8 @@ copy_string(const char *s)
     return result;
 }
 
-char *file_directory(const char *file)
+internal char *
+file_directory(const char *file)
 {
     char *last_slash = strrchr(file, '/');
     *last_slash = '\0';
@@ -25,11 +26,34 @@ char *file_directory(const char *file)
     return directory;
 }
 
-char *file_name(const char *file)
+internal char *
+file_name(const char *file)
 {
     char *last_slash = strrchr(file, '/');
     char *name = copy_string(last_slash + 1);
     return name;
+}
+
+bool hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
+{
+    bool success = false;
+    for(unsigned index = 0; success == 0 && index < hotloader->watch_count; ++index) {
+        struct watched_file *watch_info = &hotloader->watch_list[index];
+
+        char *directory = file_directory(absolutepath);
+        char *filename = file_name(absolutepath);
+
+        if(strcmp(watch_info->directory, directory) == 0) {
+            if(strcmp(watch_info->filename, filename) == 0) {
+                success = true;
+            }
+        }
+
+        free(filename);
+        free(directory);
+    }
+
+    return success;
 }
 
 void hotloader_add_file(struct hotloader *hotloader, const char *file)
