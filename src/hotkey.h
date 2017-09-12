@@ -43,6 +43,11 @@ enum hotkey_flag
     Hotkey_Flag_RControl = (1 << 11),
 
     Hotkey_Flag_Passthrough = (1 << 12),
+
+    Hotkey_Flag_Hyper = (Hotkey_Flag_Cmd |
+                         Hotkey_Flag_Alt |
+                         Hotkey_Flag_Shift |
+                         Hotkey_Flag_Control)
 };
 
 struct hotkey
