@@ -98,12 +98,12 @@ internal EVENT_TAP_CALLBACK(key_handler)
 {
     switch(type) {
     case kCGEventTapDisabledByTimeout:
-    case kCGEventTapDisabledByUserInput:
+    case kCGEventTapDisabledByUserInput: {
         printf("skhd: restarting event-tap\n");
         struct event_tap *event_tap = (struct event_tap *) reference;
         CGEventTapEnable(event_tap->handle, 1);
-        break;
-    case kCGEventKeyDown:
+    } break;
+    case kCGEventKeyDown: {
         uint32_t flags = CGEventGetFlags(event);
         uint32_t key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
         struct hotkey eventkey = { .flags = 0, .key = key };
@@ -112,7 +112,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
         if(result) {
             return NULL;
         }
-        break;
+    } break;
     }
     return event;
 }
@@ -130,13 +130,13 @@ parse_arguments(int argc, char **argv)
 
     while((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
         switch(option) {
-        case 'v':
+        case 'v': {
             printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
             return true;
-            break;
-        case 'c':
+        } break;
+        case 'c': {
             config_file = strdup(optarg);
-            break;
+        } break;
         }
     }
 
