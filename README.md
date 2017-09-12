@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/koekeishiya/skhd.svg?branch=master)](https://travis-ci.org/koekeishiya/skhd)
+
 **skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd**](https://github.com/koekeishiya/khd)
 (although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 
