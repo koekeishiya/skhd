@@ -41,10 +41,10 @@ file_name(const char *file)
     return name;
 }
 
-internal struct watch_info *
+internal struct watched_file *
 hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
 {
-    struct watch_info *result = NULL;
+    struct watched_file *result = NULL;
     for(unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
         struct watched_file *watch_info = hotloader->watch_list + index;
 
