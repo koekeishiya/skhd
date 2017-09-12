@@ -88,15 +88,11 @@ compare_ctrl(struct hotkey *a, struct hotkey *b)
 
 bool same_hotkey(struct hotkey *a, struct hotkey *b)
 {
-    if(a && b) {
-        return compare_cmd(a, b) &&
-               compare_shift(a, b) &&
-               compare_alt(a, b) &&
-               compare_ctrl(a, b) &&
-               a->key == b->key;
-    }
-
-    return false;
+    return compare_cmd(a, b) &&
+           compare_shift(a, b) &&
+           compare_alt(a, b) &&
+           compare_ctrl(a, b) &&
+           a->key == b->key;
 }
 
 unsigned long
