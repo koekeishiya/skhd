@@ -18,8 +18,7 @@ read_file(const char *file)
     char *buffer = NULL;
     FILE *handle = fopen(file, "r");
 
-    if(handle)
-    {
+    if(handle) {
         fseek(handle, 0, SEEK_END);
         length = ftell(handle);
         fseek(handle, 0, SEEK_SET);
@@ -105,7 +104,6 @@ parse_key_literal(struct parser *parser)
     uint32_t keycode;
     struct token key = parser_previous(parser);
 
-    // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
     for(int i = 0; i < array_count(literal_keycode_str); ++i) {
         if(token_equals(key, literal_keycode_str[i])) {
             keycode = literal_keycode_value[i];
@@ -132,7 +130,6 @@ parse_modifier(struct parser *parser)
     uint32_t flags = 0;
     struct token modifier = parser_previous(parser);
 
-    // NOTE(koekeishiya): Might want to replace this mapping with a hashtable
     for(int i = 0; i < array_count(modifier_flags_str); ++i) {
         if(token_equals(modifier, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
@@ -270,7 +267,7 @@ parser_advance(struct parser *parser)
 
 bool parser_check(struct parser *parser, enum token_type type)
 {
-    if(parser_eof(parser)) return 0;
+    if(parser_eof(parser)) return false;
     struct token token = parser_peek(parser);
     return token.type == type;
 }

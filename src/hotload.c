@@ -69,34 +69,34 @@ void hotloader_add_file(struct hotloader *hotloader, const char *file)
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 {
-    if(!hotloader->enabled) {
-        if(hotloader->watch_count) {
-            CFStringRef string_refs[hotloader->watch_count];
-            for(unsigned index = 0; index < hotloader->watch_count; ++index) {
-                string_refs[index] = CFStringCreateWithCString(kCFAllocatorDefault,
-                                                               hotloader->watch_list[index].directory,
-                                                               kCFStringEncodingUTF8);
-            }
-
-            FSEventStreamContext context = {};
-            context.info = (void *) hotloader;
-
-            hotloader->enabled = true;
-            hotloader->path = (CFArrayRef) CFArrayCreate(NULL, (const void **) string_refs, hotloader->watch_count, &kCFTypeArrayCallBacks);
-            hotloader->flags = kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents;
-            hotloader->stream = FSEventStreamCreate(NULL,
-                                                    callback,
-                                                    &context,
-                                                    hotloader->path,
-                                                    kFSEventStreamEventIdSinceNow,
-                                                    0.5,
-                                                    hotloader->flags);
-            FSEventStreamScheduleWithRunLoop(hotloader->stream, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
-            FSEventStreamStart(hotloader->stream);
-            return true;
-        }
+    if((hotloader->enabled) ||
+       (!hotloader->watch_count)) {
+        return false;
     }
-    return false;
+
+    CFStringRef string_refs[hotloader->watch_count];
+    for(unsigned index = 0; index < hotloader->watch_count; ++index) {
+        string_refs[index] = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                       hotloader->watch_list[index].directory,
+                                                       kCFStringEncodingUTF8);
+    }
+
+    FSEventStreamContext context = {};
+    context.info = (void *) hotloader;
+
+    hotloader->enabled = true;
+    hotloader->path = (CFArrayRef) CFArrayCreate(NULL, (const void **) string_refs, hotloader->watch_count, &kCFTypeArrayCallBacks);
+    hotloader->flags = kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents;
+    hotloader->stream = FSEventStreamCreate(NULL,
+                                            callback,
+                                            &context,
+                                            hotloader->path,
+                                            kFSEventStreamEventIdSinceNow,
+                                            0.5,
+                                            hotloader->flags);
+    FSEventStreamScheduleWithRunLoop(hotloader->stream, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
+    FSEventStreamStart(hotloader->stream);
+    return true;
 }
 
 void hotloader_end(struct hotloader *hotloader)

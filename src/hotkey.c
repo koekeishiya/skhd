@@ -13,15 +13,13 @@ fork_and_exec(char *command)
 {
     local_persist char arg[] = "-c";
     local_persist char *shell = NULL;
-    if(!shell)
-    {
+    if(!shell) {
         char *env_shell = getenv("SHELL");
         shell = env_shell ? env_shell : "/bin/bash";
     }
 
     int cpid = fork();
-    if(cpid == 0)
-    {
+    if(cpid == 0) {
         char *exec[] = { shell, arg, command, NULL};
         int status_code = execvp(exec[0], exec);
         exit(status_code);

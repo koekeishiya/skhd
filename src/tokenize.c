@@ -121,54 +121,49 @@ get_token(struct tokenizer *tokenizer)
     c = *token.text;
     advance(tokenizer);
 
-    switch(c)
-    {
-        case '\0': { token.type = Token_EndOfStream; } break;
-        case '+':  { token.type = Token_Plus;        } break;
-        case '-':
-        {
-            if(*tokenizer->at && *tokenizer->at == '>') {
-                advance(tokenizer);
-                token.length = tokenizer->at - token.text;
-                token.type = Token_Arrow;
-            } else {
-                token.type = Token_Dash;
-            }
-        } break;
-        case ':':
-        {
-            eat_whitespace(tokenizer);
-
-            token.text = tokenizer->at;
-            token.line = tokenizer->line;
-            token.cursor = tokenizer->cursor;
-
-            eat_command(tokenizer);
+    switch(c) {
+    case '\0':{ token.type = Token_EndOfStream; } break;
+    case '+': { token.type = Token_Plus;        } break;
+    case '#': {
+        eat_comment(tokenizer);
+        token = get_token(tokenizer);
+    } break;
+    case '-': {
+        if(*tokenizer->at && *tokenizer->at == '>') {
+            advance(tokenizer);
             token.length = tokenizer->at - token.text;
-            token.type = Token_Command;
-        } break;
-        case '#':
-        {
-            eat_comment(tokenizer);
-            token = get_token(tokenizer);
-        } break;
-        default:
-        {
-            if(c == '0' && *tokenizer->at == 'x') {
-                advance(tokenizer);
-                eat_hex(tokenizer);
-                token.length = tokenizer->at - token.text;
-                token.type = Token_Key_Hex;
-            } else if(isdigit(c)) {
-                token.type = Token_Key;
-            } else if(isalpha(c)) {
-                eat_identifier(tokenizer);
-                token.length = tokenizer->at - token.text;
-                token.type = resolve_identifier_type(token);
-            } else {
-                token.type = Token_Unknown;
-            }
-        } break;
+            token.type = Token_Arrow;
+        } else {
+            token.type = Token_Dash;
+        }
+    } break;
+    case ':': {
+        eat_whitespace(tokenizer);
+
+        token.text = tokenizer->at;
+        token.line = tokenizer->line;
+        token.cursor = tokenizer->cursor;
+
+        eat_command(tokenizer);
+        token.length = tokenizer->at - token.text;
+        token.type = Token_Command;
+    } break;
+    default:  {
+        if(c == '0' && *tokenizer->at == 'x') {
+            advance(tokenizer);
+            eat_hex(tokenizer);
+            token.length = tokenizer->at - token.text;
+            token.type = Token_Key_Hex;
+        } else if(isdigit(c)) {
+            token.type = Token_Key;
+        } else if(isalpha(c)) {
+            eat_identifier(tokenizer);
+            token.length = tokenizer->at - token.text;
+            token.type = resolve_identifier_type(token);
+        } else {
+            token.type = Token_Unknown;
+        }
+    } break;
     }
 
     return token;

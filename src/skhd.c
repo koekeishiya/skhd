@@ -70,9 +70,6 @@ parse_config_helper(char *absolutepath)
     struct parser parser;
     if(parser_init(&parser, absolutepath)) {
         parse_config(&parser, &hotkey_map);
-        if(parser.error) {
-            free_hotkeys(&hotkey_map);
-        }
         parser_destroy(&parser);
     } else {
         warn("skhd: could not open file '%s'\n", absolutepath);
