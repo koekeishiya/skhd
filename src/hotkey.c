@@ -84,17 +84,23 @@ compare_ctrl(struct hotkey *a, struct hotkey *b)
     }
 }
 
+internal bool
+compare_fn(struct hotkey *a, struct hotkey *b)
+{
+    return has_flags(a, Hotkey_Flag_Fn) == has_flags(b, Hotkey_Flag_Fn);
+}
+
 bool same_hotkey(struct hotkey *a, struct hotkey *b)
 {
     return compare_cmd(a, b) &&
            compare_shift(a, b) &&
            compare_alt(a, b) &&
            compare_ctrl(a, b) &&
+           compare_fn(a, b) &&
            a->key == b->key;
 }
 
-unsigned long
-hash_hotkey(struct hotkey *a)
+unsigned long hash_hotkey(struct hotkey *a)
 {
     return a->key;
 }
@@ -162,5 +168,9 @@ void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey)
         if(left)            add_flags(eventkey, Hotkey_Flag_LControl);
         if(right)           add_flags(eventkey, Hotkey_Flag_RControl);
         if(!left && !right) add_flags(eventkey, Hotkey_Flag_Control);
+    }
+
+    if((flags & Event_Mask_Fn) == Event_Mask_Fn) {
+        add_flags(eventkey, Hotkey_Flag_Fn);
     }
 }
