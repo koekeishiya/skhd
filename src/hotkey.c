@@ -1,7 +1,5 @@
 #include "hotkey.h"
-#include "locale.h"
-#include <string.h>
-#include <pthread.h>
+#include <stdlib.h>
 
 #define internal static
 #define local_persist static

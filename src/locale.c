@@ -1,5 +1,4 @@
 #include "locale.h"
-
 #include <Carbon/Carbon.h>
 #include <IOKit/hidsystem/ev_keymap.h>
 
