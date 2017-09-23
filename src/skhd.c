@@ -68,7 +68,7 @@ internal void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
-    if(parser_init(&parser, absolutepath)) {
+    if (parser_init(&parser, absolutepath)) {
         parse_config(&parser, &hotkey_map);
         parser_destroy(&parser);
     } else {
@@ -84,7 +84,7 @@ internal HOTLOADER_CALLBACK(config_handler)
 
 internal EVENT_TAP_CALLBACK(key_handler)
 {
-    switch(type) {
+    switch (type) {
     case kCGEventTapDisabledByTimeout:
     case kCGEventTapDisabledByUserInput: {
         printf("skhd: restarting event-tap\n");
@@ -97,7 +97,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
         struct hotkey eventkey = { .flags = 0, .key = key };
         cgeventflags_to_hotkeyflags(flags, &eventkey);
         bool result = find_and_exec_hotkey(&eventkey, &hotkey_map);
-        if(result) {
+        if (result) {
             return NULL;
         }
     } break;
@@ -116,8 +116,8 @@ parse_arguments(int argc, char **argv)
         { NULL, 0, NULL, 0 }
     };
 
-    while((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
-        switch(option) {
+    while ((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
+        switch (option) {
         case 'v': {
             printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
             return true;
@@ -154,7 +154,7 @@ internal void
 set_config_path()
 {
     char *home = getenv("HOME");
-    if(home) {
+    if (home) {
         int length = strlen(home) + strlen("/.skhdrc");
         config_file = (char *) malloc(length + 1);
         strcpy(config_file, home);
@@ -166,23 +166,23 @@ set_config_path()
 
 int main(int argc, char **argv)
 {
-    if(parse_arguments(argc, argv)) {
+    if (parse_arguments(argc, argv)) {
         return EXIT_SUCCESS;
     }
 
-    if(getuid() == 0 || geteuid() == 0) {
+    if (getuid() == 0 || geteuid() == 0) {
         error("skhd: running as root is not allowed! abort..\n");
     }
 
-    if(secure_keyboard_entry_enabled()) {
+    if (secure_keyboard_entry_enabled()) {
         error("skhd: secure keyboard entry is enabled! abort..\n");
     }
 
-    if(!check_privileges()) {
+    if (!check_privileges()) {
         error("skhd: must be run with accessibility access.\n");
     }
 
-    if(!config_file) {
+    if (!config_file) {
         set_config_path();
     }
 

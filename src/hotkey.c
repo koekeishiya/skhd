@@ -66,13 +66,13 @@ fork_and_exec(char *command)
 {
     local_persist char arg[] = "-c";
     local_persist char *shell = NULL;
-    if(!shell) {
+    if (!shell) {
         char *env_shell = getenv("SHELL");
         shell = env_shell ? env_shell : "/bin/bash";
     }
 
     int cpid = fork();
-    if(cpid == 0) {
+    if (cpid == 0) {
         char *exec[] = { shell, arg, command, NULL};
         int status_code = execvp(exec[0], exec);
         exit(status_code);
@@ -85,8 +85,8 @@ bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map)
 {
     bool result = false;
     struct hotkey *hotkey;
-    if((hotkey = table_find(hotkey_map, eventkey))) {
-        if(fork_and_exec(hotkey->command)) {
+    if ((hotkey = table_find(hotkey_map, eventkey))) {
+        if (fork_and_exec(hotkey->command)) {
             result = has_flags(hotkey, Hotkey_Flag_Passthrough) ? false : true;
         }
     }
@@ -97,13 +97,13 @@ void free_hotkeys(struct table *hotkey_map)
 {
     int count;
     void **hotkeys = table_reset(hotkey_map, &count);
-    for(int index = 0; index < count; ++index) {
+    for (int index = 0; index < count; ++index) {
         struct hotkey *hotkey = (struct hotkey *) hotkeys[index];
         free(hotkey->command);
         free(hotkey);
     }
 
-    if(count) {
+    if (count) {
         free(hotkeys);
     }
 }
@@ -115,13 +115,13 @@ cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags flags, struct hotkey *event
     enum osx_event_mask lmask = cgevent_lrmod_flag[mod + LMOD_OFFS];
     enum osx_event_mask rmask = cgevent_lrmod_flag[mod + RMOD_OFFS];
 
-    if((flags & mask) == mask) {
+    if ((flags & mask) == mask) {
         bool left  = (flags & lmask) == lmask;
         bool right = (flags & rmask) == rmask;
 
-        if(left)            add_flags(eventkey, hotkey_lrmod_flag[mod + LMOD_OFFS]);
-        if(right)           add_flags(eventkey, hotkey_lrmod_flag[mod + RMOD_OFFS]);
-        if(!left && !right) add_flags(eventkey, hotkey_lrmod_flag[mod]);
+        if (left)            add_flags(eventkey, hotkey_lrmod_flag[mod + LMOD_OFFS]);
+        if (right)           add_flags(eventkey, hotkey_lrmod_flag[mod + RMOD_OFFS]);
+        if (!left && !right) add_flags(eventkey, hotkey_lrmod_flag[mod]);
     }
 }
 
@@ -132,7 +132,7 @@ void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey)
     cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_CTRL);
     cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_SHIFT);
 
-    if((flags & Event_Mask_Fn) == Event_Mask_Fn) {
+    if ((flags & Event_Mask_Fn) == Event_Mask_Fn) {
         add_flags(eventkey, Hotkey_Flag_Fn);
     }
 }

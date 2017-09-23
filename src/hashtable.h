@@ -47,8 +47,8 @@ static struct bucket **
 table_get_bucket(struct table *table, void *key)
 {
     struct bucket **bucket = table->buckets + (table->hash(key) % table->capacity);
-    while(*bucket) {
-        if(table->compare((*bucket)->key, key)) {
+    while (*bucket) {
+        if (table->compare((*bucket)->key, key)) {
             break;
         }
         bucket = &(*bucket)->next;
@@ -68,9 +68,9 @@ void table_init(struct table *table, int capacity, table_hash_func hash, table_c
 
 void table_free(struct table *table)
 {
-    for(int i = 0; i < table->capacity; ++i) {
+    for (int i = 0; i < table->capacity; ++i) {
         struct bucket *next, *bucket = table->buckets[i];
-        while(bucket) {
+        while (bucket) {
             next = bucket->next;
             free(bucket);
             bucket = next;
@@ -88,7 +88,7 @@ void *table_find(struct table *table, void *key)
 void table_add(struct table *table, void *key, void *value)
 {
     struct bucket **bucket = table_get_bucket(table, key);
-    if(*bucket) {
+    if (*bucket) {
         (*bucket)->value = value;
     } else {
         *bucket = table_new_bucket(key, value);
@@ -100,7 +100,7 @@ void *table_remove(struct table *table, void *key)
 {
     void *result = NULL;
     struct bucket *next, **bucket = table_get_bucket(table, key);
-    if(*bucket) {
+    if (*bucket) {
         result = (*bucket)->value;
         next = (*bucket)->next;
         free(*bucket);
@@ -122,9 +122,9 @@ void *table_reset(struct table *table, int *count)
     values = malloc(sizeof(void *) * table->count);
     item = 0;
 
-    for(index = 0; index < capacity; ++index) {
+    for (index = 0; index < capacity; ++index) {
         struct bucket *next, **bucket = table->buckets + index;
-        while(*bucket) {
+        while (*bucket) {
             values[item++] = (*bucket)->value;
             next = (*bucket)->next;
             free(*bucket);

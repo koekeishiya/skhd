@@ -18,7 +18,7 @@ read_file(const char *file)
     char *buffer = NULL;
     FILE *handle = fopen(file, "r");
 
-    if(handle) {
+    if (handle) {
         fseek(handle, 0, SEEK_END);
         length = ftell(handle);
         fseek(handle, 0, SEEK_SET);
@@ -104,8 +104,8 @@ parse_key_literal(struct parser *parser)
     uint32_t keycode;
     struct token key = parser_previous(parser);
 
-    for(int i = 0; i < array_count(literal_keycode_str); ++i) {
-        if(token_equals(key, literal_keycode_str[i])) {
+    for (int i = 0; i < array_count(literal_keycode_str); ++i) {
+        if (token_equals(key, literal_keycode_str[i])) {
             keycode = literal_keycode_value[i];
             printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
             break;
@@ -131,16 +131,16 @@ parse_modifier(struct parser *parser)
     uint32_t flags = 0;
     struct token modifier = parser_previous(parser);
 
-    for(int i = 0; i < array_count(modifier_flags_str); ++i) {
-        if(token_equals(modifier, modifier_flags_str[i])) {
+    for (int i = 0; i < array_count(modifier_flags_str); ++i) {
+        if (token_equals(modifier, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
             printf("\tmod: '%s'\n", modifier_flags_str[i]);
             break;
         }
     }
 
-    if(parser_match(parser, Token_Plus)) {
-        if(parser_match(parser, Token_Modifier)) {
+    if (parser_match(parser, Token_Plus)) {
+        if (parser_match(parser, Token_Modifier)) {
             flags |= parse_modifier(parser);
         } else {
             fprintf(stderr, "(#%d:%d) expected modifier, but got '%.*s'\n",
@@ -161,9 +161,9 @@ parse_hotkey(struct parser *parser)
 
     printf("(#%d) hotkey :: {\n", parser->current_token.line);
 
-    if(parser_match(parser, Token_Modifier)) {
+    if (parser_match(parser, Token_Modifier)) {
         hotkey->flags = parse_modifier(parser);
-        if(parser->error) {
+        if (parser->error) {
             return NULL;
         }
         found_modifier = 1;
@@ -171,8 +171,8 @@ parse_hotkey(struct parser *parser)
         hotkey->flags = found_modifier = 0;
     }
 
-    if(found_modifier) {
-        if(!parser_match(parser, Token_Dash)) {
+    if (found_modifier) {
+        if (!parser_match(parser, Token_Dash)) {
             fprintf(stderr, "(#%d:%d) expected '-', but got '%.*s'\n",
                     parser->current_token.line, parser->current_token.cursor,
                     parser->current_token.length, parser->current_token.text);
@@ -181,11 +181,11 @@ parse_hotkey(struct parser *parser)
         }
     }
 
-    if(parser_match(parser, Token_Key)) {
+    if (parser_match(parser, Token_Key)) {
         hotkey->key = parse_key(parser);
-    } else if(parser_match(parser, Token_Key_Hex)) {
+    } else if (parser_match(parser, Token_Key_Hex)) {
         hotkey->key = parse_key_hex(parser);
-    } else if(parser_match(parser, Token_Literal)) {
+    } else if (parser_match(parser, Token_Literal)) {
         hotkey->key = parse_key_literal(parser);
     } else {
         fprintf(stderr, "(#%d:%d) expected key-literal, but got '%.*s'\n",
@@ -195,11 +195,11 @@ parse_hotkey(struct parser *parser)
         return NULL;
     }
 
-    if(parser_match(parser, Token_Arrow)) {
+    if (parser_match(parser, Token_Arrow)) {
         hotkey->flags |= Hotkey_Flag_Passthrough;
     }
 
-    if(parser_match(parser, Token_Command)) {
+    if (parser_match(parser, Token_Command)) {
         hotkey->command = parse_command(parser);
     } else {
         fprintf(stderr, "(#%d:%d) expected ':' followed by command, but got '%.*s'\n",
@@ -217,13 +217,13 @@ parse_hotkey(struct parser *parser)
 void parse_config(struct parser *parser, struct table *hotkey_map)
 {
     struct hotkey *hotkey;
-    while(!parser_eof(parser)) {
-        if((parser_check(parser, Token_Modifier)) ||
-           (parser_check(parser, Token_Literal)) ||
-           (parser_check(parser, Token_Key_Hex)) ||
-           (parser_check(parser, Token_Key))) {
+    while (!parser_eof(parser)) {
+        if ((parser_check(parser, Token_Modifier)) ||
+            (parser_check(parser, Token_Literal)) ||
+            (parser_check(parser, Token_Key_Hex)) ||
+            (parser_check(parser, Token_Key))) {
             hotkey = parse_hotkey(parser);
-            if(parser->error) {
+            if (parser->error) {
                 free_hotkeys(hotkey_map);
                 return;
             }
@@ -259,7 +259,7 @@ bool parser_eof(struct parser *parser)
 struct token
 parser_advance(struct parser *parser)
 {
-    if(!parser_eof(parser)) {
+    if (!parser_eof(parser)) {
         parser->previous_token = parser->current_token;
         parser->current_token = get_token(&parser->tokenizer);
     }
@@ -268,14 +268,14 @@ parser_advance(struct parser *parser)
 
 bool parser_check(struct parser *parser, enum token_type type)
 {
-    if(parser_eof(parser)) return false;
+    if (parser_eof(parser)) return false;
     struct token token = parser_peek(parser);
     return token.type == type;
 }
 
 bool parser_match(struct parser *parser, enum token_type type)
 {
-    if(parser_check(parser, type)) {
+    if (parser_check(parser, type)) {
         parser_advance(parser);
         return true;
     }
@@ -286,7 +286,7 @@ bool parser_init(struct parser *parser, char *file)
 {
     memset(parser, 0, sizeof(struct parser));
     char *buffer = read_file(file);
-    if(buffer) {
+    if (buffer) {
         tokenizer_init(&parser->tokenizer, buffer);
         parser_advance(parser);
         return true;

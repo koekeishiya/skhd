@@ -44,14 +44,14 @@ internal struct watched_file *
 hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
 {
     struct watched_file *result = NULL;
-    for(unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
+    for (unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
         struct watched_file *watch_info = hotloader->watch_list + index;
 
         char *directory = file_directory(absolutepath);
         char *filename = file_name(absolutepath);
 
-        if(strcmp(watch_info->directory, directory) == 0) {
-            if(strcmp(watch_info->filename, filename) == 0) {
+        if (strcmp(watch_info->directory, directory) == 0) {
+            if (strcmp(watch_info->filename, filename) == 0) {
                 result = watch_info;
             }
         }
@@ -70,9 +70,9 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     char **files = (char **) paths;
 
     struct watched_file *watch_info;
-    for(unsigned index = 0; index < count; ++index) {
+    for (unsigned index = 0; index < count; ++index) {
         char *absolutepath = files[index];
-        if((watch_info = hotloader_watched_file(hotloader, absolutepath))) {
+        if ((watch_info = hotloader_watched_file(hotloader, absolutepath))) {
             hotloader->callback(absolutepath, watch_info->directory, watch_info->filename);
         }
     }
@@ -80,7 +80,7 @@ internal FSEVENT_CALLBACK(hotloader_handler)
 
 void hotloader_add_file(struct hotloader *hotloader, const char *file)
 {
-    if(!hotloader->enabled) {
+    if (!hotloader->enabled) {
         struct watched_file watch_info;
         watch_info.directory = file_directory(file);
         watch_info.filename = file_name(file);
@@ -91,13 +91,13 @@ void hotloader_add_file(struct hotloader *hotloader, const char *file)
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 {
-    if((hotloader->enabled) ||
-       (!hotloader->watch_count)) {
+    if ((hotloader->enabled) ||
+        (!hotloader->watch_count)) {
         return false;
     }
 
     CFStringRef string_refs[hotloader->watch_count];
-    for(unsigned index = 0; index < hotloader->watch_count; ++index) {
+    for (unsigned index = 0; index < hotloader->watch_count; ++index) {
         string_refs[index] = CFStringCreateWithCString(kCFAllocatorDefault,
                                                        hotloader->watch_list[index].directory,
                                                        kCFStringEncodingUTF8);
@@ -124,13 +124,13 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 
 void hotloader_end(struct hotloader *hotloader)
 {
-    if(hotloader->enabled) {
+    if (hotloader->enabled) {
         FSEventStreamStop(hotloader->stream);
         FSEventStreamInvalidate(hotloader->stream);
         FSEventStreamRelease(hotloader->stream);
 
         CFIndex count = CFArrayGetCount(hotloader->path);
-        for(unsigned index = 0; index < count; ++index) {
+        for (unsigned index = 0; index < count; ++index) {
             CFStringRef string_ref = (CFStringRef) CFArrayGetValueAtIndex(hotloader->path, index);
             free(hotloader->watch_list[index].directory);
             free(hotloader->watch_list[index].filename);

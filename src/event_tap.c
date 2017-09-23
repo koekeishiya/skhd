@@ -16,7 +16,7 @@ bool event_tap_begin(struct event_tap *event_tap, event_tap_callback *callback)
                                          event_tap);
 
     bool result = event_tap_enabled(event_tap);
-    if(result) {
+    if (result) {
         event_tap->runloop_source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault,
                                                                   event_tap->handle,
                                                                   0);
@@ -28,7 +28,7 @@ bool event_tap_begin(struct event_tap *event_tap, event_tap_callback *callback)
 
 void event_tap_end(struct event_tap *event_tap)
 {
-    if(event_tap_enabled(event_tap)) {
+    if (event_tap_enabled(event_tap)) {
         CGEventTapEnable(event_tap->handle, false);
         CFMachPortInvalidate(event_tap->handle);
         CFRunLoopRemoveSource(CFRunLoopGetMain(), event_tap->runloop_source, kCFRunLoopCommonModes);

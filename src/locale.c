@@ -13,7 +13,7 @@ cfstring_from_keycode(CGKeyCode keycode)
     CFRelease(keyboard);
 
     UCKeyboardLayout *keyboard_layout = (UCKeyboardLayout *) CFDataGetBytePtr(uchr);
-    if(keyboard_layout) {
+    if (keyboard_layout) {
         UInt32 dead_key_state = 0;
         UniCharCount max_string_length = 255;
         UniCharCount string_length = 0;
@@ -27,7 +27,7 @@ cfstring_from_keycode(CGKeyCode keycode)
                                          &string_length,
                                          unicode_string);
 
-        if(string_length == 0 && dead_key_state) {
+        if (string_length == 0 && dead_key_state) {
             status = UCKeyTranslate(keyboard_layout, kVK_Space,
                                     kUCKeyActionDown, 0,
                                     LMGetKbdType(), 0,
@@ -37,7 +37,7 @@ cfstring_from_keycode(CGKeyCode keycode)
                                     unicode_string);
         }
 
-        if(string_length > 0 && status == noErr) {
+        if (string_length > 0 && status == noErr) {
             return CFStringCreateWithCharacters(NULL, unicode_string, string_length);
         }
     }
@@ -51,11 +51,11 @@ uint32_t keycode_from_char(char key)
 {
     uint32_t keycode = 0;
     local_persist CFMutableDictionaryRef keycode_map = NULL;
-    if(!keycode_map) {
+    if (!keycode_map) {
         keycode_map = CFDictionaryCreateMutable(kCFAllocatorDefault, 128, &kCFCopyStringDictionaryKeyCallBacks, NULL);
-        for(unsigned index = 0; index < 128; ++index) {
+        for (unsigned index = 0; index < 128; ++index) {
             CFStringRef key_string = cfstring_from_keycode(index);
-            if(key_string) {
+            if (key_string) {
                 CFDictionaryAddValue(keycode_map, key_string, (const void *)index);
                 CFRelease(key_string);
             }
