@@ -1,7 +1,6 @@
 #ifndef SKHD_TOKENIZE_H
 #define SKHD_TOKENIZE_H
 
-#define array_count(a) (sizeof((a)) / sizeof(*(a)))
 static const char *modifier_flags_str[] =
 {
     "alt",   "lalt",    "ralt",

@@ -1,7 +1,8 @@
 #include "tokenize.h"
-#define internal static
-
 #include <ctype.h>
+
+#define internal static
+#define array_count(a) (sizeof((a)) / sizeof(*(a)))
 
 int token_equals(struct token token, const char *match)
 {

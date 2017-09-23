@@ -28,60 +28,40 @@ fork_and_exec(char *command)
     return true;
 }
 
-internal bool
-compare_cmd(struct hotkey *a, struct hotkey *b)
+#define LRMOD_ALT   0
+#define LRMOD_CMD   6
+#define LRMOD_CTRL  9
+#define LRMOD_SHIFT 3
+#define LMOD_OFFS   1
+#define RMOD_OFFS   2
+
+internal uint32_t cgevent_lrmod_flag[] =
 {
-    if(has_flags(a, Hotkey_Flag_Cmd)) {
-        return (has_flags(b, Hotkey_Flag_LCmd) ||
-                has_flags(b, Hotkey_Flag_RCmd) ||
-                has_flags(b, Hotkey_Flag_Cmd));
-    } else {
-        return ((has_flags(a, Hotkey_Flag_LCmd) == has_flags(b, Hotkey_Flag_LCmd)) &&
-                (has_flags(a, Hotkey_Flag_RCmd) == has_flags(b, Hotkey_Flag_RCmd)) &&
-                (has_flags(a, Hotkey_Flag_Cmd) == has_flags(b, Hotkey_Flag_Cmd)));
-    }
-}
+    Event_Mask_Alt,     Event_Mask_LAlt,     Event_Mask_RAlt,
+    Event_Mask_Shift,   Event_Mask_LShift,   Event_Mask_RShift,
+    Event_Mask_Cmd,     Event_Mask_LCmd,     Event_Mask_RCmd,
+    Event_Mask_Control, Event_Mask_LControl, Event_Mask_RControl,
+};
+
+internal uint32_t hotkey_lrmod_flag[] =
+{
+    Hotkey_Flag_Alt,     Hotkey_Flag_LAlt,     Hotkey_Flag_RAlt,
+    Hotkey_Flag_Shift,   Hotkey_Flag_LShift,   Hotkey_Flag_RShift,
+    Hotkey_Flag_Cmd,     Hotkey_Flag_LCmd,     Hotkey_Flag_RCmd,
+    Hotkey_Flag_Control, Hotkey_Flag_LControl, Hotkey_Flag_RControl,
+};
 
 internal bool
-compare_shift(struct hotkey *a, struct hotkey *b)
+compare_lr_mod(struct hotkey *a, struct hotkey *b, int mod)
 {
-    if(has_flags(a, Hotkey_Flag_Shift)) {
-        return (has_flags(b, Hotkey_Flag_LShift) ||
-                has_flags(b, Hotkey_Flag_RShift) ||
-                has_flags(b, Hotkey_Flag_Shift));
-    } else {
-        return ((has_flags(a, Hotkey_Flag_LShift) == has_flags(b, Hotkey_Flag_LShift)) &&
-                (has_flags(a, Hotkey_Flag_RShift) == has_flags(b, Hotkey_Flag_RShift)) &&
-                (has_flags(a, Hotkey_Flag_Shift) == has_flags(b, Hotkey_Flag_Shift)));
-    }
-}
-
-internal bool
-compare_alt(struct hotkey *a, struct hotkey *b)
-{
-    if(has_flags(a, Hotkey_Flag_Alt)) {
-        return (has_flags(b, Hotkey_Flag_LAlt) ||
-                has_flags(b, Hotkey_Flag_RAlt) ||
-                has_flags(b, Hotkey_Flag_Alt));
-    } else {
-        return ((has_flags(a, Hotkey_Flag_LAlt) == has_flags(b, Hotkey_Flag_LAlt)) &&
-                (has_flags(a, Hotkey_Flag_RAlt) == has_flags(b, Hotkey_Flag_RAlt)) &&
-                (has_flags(a, Hotkey_Flag_Alt) == has_flags(b, Hotkey_Flag_Alt)));
-    }
-}
-
-internal bool
-compare_ctrl(struct hotkey *a, struct hotkey *b)
-{
-    if(has_flags(a, Hotkey_Flag_Control)) {
-        return (has_flags(b, Hotkey_Flag_LControl) ||
-                has_flags(b, Hotkey_Flag_RControl) ||
-                has_flags(b, Hotkey_Flag_Control));
-    } else {
-        return ((has_flags(a, Hotkey_Flag_LControl) == has_flags(b, Hotkey_Flag_LControl)) &&
-                (has_flags(a, Hotkey_Flag_RControl) == has_flags(b, Hotkey_Flag_RControl)) &&
-                (has_flags(a, Hotkey_Flag_Control) == has_flags(b, Hotkey_Flag_Control)));
-    }
+    bool result = has_flags(a, hotkey_lrmod_flag[mod])
+                ? has_flags(b, hotkey_lrmod_flag[mod + LMOD_OFFS]) ||
+                  has_flags(b, hotkey_lrmod_flag[mod + RMOD_OFFS]) ||
+                  has_flags(b, hotkey_lrmod_flag[mod])
+                : has_flags(a, hotkey_lrmod_flag[mod + LMOD_OFFS]) == has_flags(b, hotkey_lrmod_flag[mod + LMOD_OFFS]) &&
+                  has_flags(a, hotkey_lrmod_flag[mod + RMOD_OFFS]) == has_flags(b, hotkey_lrmod_flag[mod + RMOD_OFFS]) &&
+                  has_flags(a, hotkey_lrmod_flag[mod])             == has_flags(b, hotkey_lrmod_flag[mod]);
+    return result;
 }
 
 internal bool
@@ -92,10 +72,10 @@ compare_fn(struct hotkey *a, struct hotkey *b)
 
 bool same_hotkey(struct hotkey *a, struct hotkey *b)
 {
-    return compare_cmd(a, b) &&
-           compare_shift(a, b) &&
-           compare_alt(a, b) &&
-           compare_ctrl(a, b) &&
+    return compare_lr_mod(a, b, LRMOD_ALT)   &&
+           compare_lr_mod(a, b, LRMOD_CMD)   &&
+           compare_lr_mod(a, b, LRMOD_CTRL)  &&
+           compare_lr_mod(a, b, LRMOD_SHIFT) &&
            compare_fn(a, b) &&
            a->key == b->key;
 }
@@ -132,43 +112,29 @@ void free_hotkeys(struct table *hotkey_map)
     }
 }
 
+internal void
+cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags flags, struct hotkey *eventkey, int mod)
+{
+    enum osx_event_mask mask  = cgevent_lrmod_flag[mod];
+    enum osx_event_mask lmask = cgevent_lrmod_flag[mod + LMOD_OFFS];
+    enum osx_event_mask rmask = cgevent_lrmod_flag[mod + RMOD_OFFS];
+
+    if((flags & mask) == mask) {
+        bool left  = (flags & lmask) == lmask;
+        bool right = (flags & rmask) == rmask;
+
+        if(left)            add_flags(eventkey, hotkey_lrmod_flag[mod + LMOD_OFFS]);
+        if(right)           add_flags(eventkey, hotkey_lrmod_flag[mod + RMOD_OFFS]);
+        if(!left && !right) add_flags(eventkey, hotkey_lrmod_flag[mod]);
+    }
+}
+
 void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey)
 {
-    if((flags & Event_Mask_Cmd) == Event_Mask_Cmd) {
-        bool left = (flags & Event_Mask_LCmd) == Event_Mask_LCmd;
-        bool right = (flags & Event_Mask_RCmd) == Event_Mask_RCmd;
-
-        if(left)            add_flags(eventkey, Hotkey_Flag_LCmd);
-        if(right)           add_flags(eventkey, Hotkey_Flag_RCmd);
-        if(!left && !right) add_flags(eventkey, Hotkey_Flag_Cmd);
-    }
-
-    if((flags & Event_Mask_Shift) == Event_Mask_Shift) {
-        bool left = (flags & Event_Mask_LShift) == Event_Mask_LShift;
-        bool right = (flags & Event_Mask_RShift) == Event_Mask_RShift;
-
-        if(left)            add_flags(eventkey, Hotkey_Flag_LShift);
-        if(right)           add_flags(eventkey, Hotkey_Flag_RShift);
-        if(!left && !right) add_flags(eventkey, Hotkey_Flag_Shift);
-    }
-
-    if((flags & Event_Mask_Alt) == Event_Mask_Alt) {
-        bool left = (flags & Event_Mask_LAlt) == Event_Mask_LAlt;
-        bool right = (flags & Event_Mask_RAlt) == Event_Mask_RAlt;
-
-        if(left)            add_flags(eventkey, Hotkey_Flag_LAlt);
-        if(right)           add_flags(eventkey, Hotkey_Flag_RAlt);
-        if(!left && !right) add_flags(eventkey, Hotkey_Flag_Alt);
-    }
-
-    if((flags & Event_Mask_Control) == Event_Mask_Control) {
-        bool left = (flags & Event_Mask_LControl) == Event_Mask_LControl;
-        bool right = (flags & Event_Mask_RControl) == Event_Mask_RControl;
-
-        if(left)            add_flags(eventkey, Hotkey_Flag_LControl);
-        if(right)           add_flags(eventkey, Hotkey_Flag_RControl);
-        if(!left && !right) add_flags(eventkey, Hotkey_Flag_Control);
-    }
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_ALT);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_CMD);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_CTRL);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_SHIFT);
 
     if((flags & Event_Mask_Fn) == Event_Mask_Fn) {
         add_flags(eventkey, Hotkey_Flag_Fn);
