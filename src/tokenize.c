@@ -63,10 +63,6 @@ eat_hex(struct tokenizer *tokenizer)
     }
 }
 
-// NOTE(koekeishiya): production rules:
-// identifier = <char><char>   | <char><number>
-// number     = <digit><digit> | <digit>
-// digit      = 0..9
 internal void
 eat_identifier(struct tokenizer *tokenizer)
 {
