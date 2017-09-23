@@ -8,26 +8,6 @@
 #define internal static
 #define local_persist static
 
-internal bool
-fork_and_exec(char *command)
-{
-    local_persist char arg[] = "-c";
-    local_persist char *shell = NULL;
-    if(!shell) {
-        char *env_shell = getenv("SHELL");
-        shell = env_shell ? env_shell : "/bin/bash";
-    }
-
-    int cpid = fork();
-    if(cpid == 0) {
-        char *exec[] = { shell, arg, command, NULL};
-        int status_code = execvp(exec[0], exec);
-        exit(status_code);
-    }
-
-    return true;
-}
-
 #define LRMOD_ALT   0
 #define LRMOD_CMD   6
 #define LRMOD_CTRL  9
@@ -83,6 +63,26 @@ bool same_hotkey(struct hotkey *a, struct hotkey *b)
 unsigned long hash_hotkey(struct hotkey *a)
 {
     return a->key;
+}
+
+internal bool
+fork_and_exec(char *command)
+{
+    local_persist char arg[] = "-c";
+    local_persist char *shell = NULL;
+    if(!shell) {
+        char *env_shell = getenv("SHELL");
+        shell = env_shell ? env_shell : "/bin/bash";
+    }
+
+    int cpid = fork();
+    if(cpid == 0) {
+        char *exec[] = { shell, arg, command, NULL};
+        int status_code = execvp(exec[0], exec);
+        exit(status_code);
+    }
+
+    return true;
 }
 
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map)
