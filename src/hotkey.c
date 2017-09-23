@@ -1,7 +1,5 @@
 #include "hotkey.h"
 #include "locale.h"
-#include "parse.h"
-
 #include <string.h>
 #include <pthread.h>
 
