@@ -39,7 +39,12 @@ After access has been granted, the application must be restarted.
 
 **Homebrew**:
 
-Requires xcode-8 command-line tools,
+Requires xcode-8 command-line tools.
+
+Homebrew compilation seems to generate an incorrect binary for some people.
+
+If this happens, follow the installation from source instructions instead.
+
 
       brew install koekeishiya/formulae/skhd
       brew services start skhd
@@ -49,8 +54,9 @@ Requires xcode-8 command-line tools,
 
 **Source**:
 
-Requires xcode-8 command-line tools,
+Requires xcode-8 command-line tools.
 
+      git clone https://github.com/koekeishiya/skhd
       make install      # release version
       make              # debug version
 
