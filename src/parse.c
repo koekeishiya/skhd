@@ -79,10 +79,11 @@ parse_key(struct parser *parser)
     return keycode;
 }
 
+#define KEY_HAS_IMPLICIT_FN_MOD 4
 internal uint32_t literal_keycode_value[] =
 {
     kVK_Return,     kVK_Tab,           kVK_Space,
-    kVK_Delete,     kVK_ForwardDelete, kVK_Escape,
+    kVK_Delete,     kVK_Escape,        kVK_ForwardDelete,
     kVK_Home,       kVK_End,           kVK_PageUp,
     kVK_PageDown,   kVK_Help,          kVK_LeftArrow,
     kVK_RightArrow, kVK_UpArrow,       kVK_DownArrow,
@@ -95,27 +96,19 @@ internal uint32_t literal_keycode_value[] =
     kVK_F19,        kVK_F20,
 };
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsometimes-uninitialized"
-// NOTE(koekeishiya): shut up compiler !!!
-// if we get to this point, we already KNOW that the input is valid..
-internal uint32_t
-parse_key_literal(struct parser *parser)
+internal void
+parse_key_literal(struct parser *parser, struct hotkey *hotkey)
 {
-    uint32_t keycode;
     struct token key = parser_previous(parser);
-
     for (int i = 0; i < array_count(literal_keycode_str); ++i) {
         if (token_equals(key, literal_keycode_str[i])) {
-            keycode = literal_keycode_value[i];
-            printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
+            if (i > KEY_HAS_IMPLICIT_FN_MOD) hotkey->flags |= Hotkey_Flag_Fn;
+            hotkey->key = literal_keycode_value[i];
+            printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
             break;
         }
     }
-
-    return keycode;
 }
-#pragma clang diagnostic pop
 
 internal enum hotkey_flag modifier_flags_value[] =
 {
@@ -187,7 +180,7 @@ parse_hotkey(struct parser *parser)
     } else if (parser_match(parser, Token_Key_Hex)) {
         hotkey->key = parse_key_hex(parser);
     } else if (parser_match(parser, Token_Literal)) {
-        hotkey->key = parse_key_literal(parser);
+        parse_key_literal(parser, hotkey);
     } else {
         fprintf(stderr, "(#%d:%d) expected key-literal, but got '%.*s'\n",
                 parser->current_token.line, parser->current_token.cursor,

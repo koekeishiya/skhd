@@ -13,9 +13,9 @@ static const char *modifier_flags_str[] =
 static const char *literal_keycode_str[] =
 {
     "return",     "tab",        "space",
-    "backspace",  "delete",     "escape",
+    "backspace",  "escape",     "delete",
     "home",       "end",        "pageup",
-    "pagedown",   "help",       "left",
+    "pagedown",   "insert",     "left",
     "right",      "up",         "down",
     "f1",         "f2",         "f3",
     "f4",         "f5",         "f6",
