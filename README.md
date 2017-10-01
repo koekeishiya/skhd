@@ -41,11 +41,6 @@ After access has been granted, the application must be restarted.
 
 Requires xcode-8 command-line tools.
 
-Homebrew compilation seems to generate an incorrect binary for some people.
-
-If this happens, follow the installation from source instructions instead.
-
-
       brew install koekeishiya/formulae/skhd
       brew services start skhd
 
