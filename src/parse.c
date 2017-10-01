@@ -73,8 +73,9 @@ parse_key(struct parser *parser)
 {
     uint32_t keycode;
     struct token key = parser_previous(parser);
-    keycode = keycode_from_char(*key.text);
-    printf("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
+    char c = *key.text;
+    keycode = keycode_from_char(c);
+    printf("\tkey: '%c' (0x%02x)\n", c, keycode);
     return keycode;
 }
 
