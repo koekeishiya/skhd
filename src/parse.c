@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdbool.h>
 
 #define internal static
@@ -137,10 +138,7 @@ parse_modifier(struct parser *parser)
         if (parser_match(parser, Token_Modifier)) {
             flags |= parse_modifier(parser);
         } else {
-            fprintf(stderr, "(#%d:%d) expected modifier, but got '%.*s'\n",
-                    parser->current_token.line, parser->current_token.cursor,
-                    parser->current_token.length, parser->current_token.text);
-            parser->error = true;
+            parser_report_error(parser, "expected modifier");
         }
     }
 
@@ -167,10 +165,7 @@ parse_hotkey(struct parser *parser)
 
     if (found_modifier) {
         if (!parser_match(parser, Token_Dash)) {
-            fprintf(stderr, "(#%d:%d) expected '-', but got '%.*s'\n",
-                    parser->current_token.line, parser->current_token.cursor,
-                    parser->current_token.length, parser->current_token.text);
-            parser->error = true;
+            parser_report_error(parser, "expected '-'");
             return NULL;
         }
     }
@@ -182,10 +177,7 @@ parse_hotkey(struct parser *parser)
     } else if (parser_match(parser, Token_Literal)) {
         parse_key_literal(parser, hotkey);
     } else {
-        fprintf(stderr, "(#%d:%d) expected key-literal, but got '%.*s'\n",
-                parser->current_token.line, parser->current_token.cursor,
-                parser->current_token.length, parser->current_token.text);
-        parser->error = true;
+        parser_report_error(parser, "expected key-literal");
         return NULL;
     }
 
@@ -196,10 +188,7 @@ parse_hotkey(struct parser *parser)
     if (parser_match(parser, Token_Command)) {
         hotkey->command = parse_command(parser);
     } else {
-        fprintf(stderr, "(#%d:%d) expected ':' followed by command, but got '%.*s'\n",
-                parser->current_token.line, parser->current_token.cursor,
-                parser->current_token.length, parser->current_token.text);
-        parser->error = true;
+        parser_report_error(parser, "expected ':' followed by command");
         return NULL;
     }
 
@@ -223,10 +212,7 @@ void parse_config(struct parser *parser, struct table *hotkey_map)
             }
             table_add(hotkey_map, hotkey, hotkey);
         } else {
-            fprintf(stderr, "(#%d:%d) expected modifier or key-literal, but got '%.*s'\n",
-                    parser->current_token.line, parser->current_token.cursor,
-                    parser->current_token.length, parser->current_token.text);
-            parser->error = true;
+            parser_report_error(parser, "expected modifier or key-literal");
             return;
         }
     }
@@ -274,6 +260,17 @@ bool parser_match(struct parser *parser, enum token_type type)
         return true;
     }
     return false;
+}
+
+void parser_report_error(struct parser *parser, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "(#%d:%d) ", parser->current_token.line, parser->current_token.cursor);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, ", but got '%.*s'\n", parser->current_token.length, parser->current_token.text);
+    va_end(args);
+    parser->error = true;
 }
 
 bool parser_init(struct parser *parser, char *file)

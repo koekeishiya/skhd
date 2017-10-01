@@ -23,5 +23,6 @@ bool parser_check(struct parser *parser, enum token_type type);
 bool parser_match(struct parser *parser, enum token_type type);
 bool parser_init(struct parser *parser, char *file);
 void parser_destroy(struct parser *parser);
+void parser_report_error(struct parser *parser, const char *format, ...);
 
 #endif
