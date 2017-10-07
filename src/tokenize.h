@@ -28,12 +28,18 @@ static const char *literal_keycode_str[] =
 
 enum token_type
 {
+    Token_Identifier,
+    Token_Activate,
+
     Token_Command,
     Token_Modifier,
     Token_Literal,
     Token_Key_Hex,
     Token_Key,
 
+    Token_Decl,
+    Token_Comma,
+    Token_Insert,
     Token_Plus,
     Token_Dash,
     Token_Arrow,

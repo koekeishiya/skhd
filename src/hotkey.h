@@ -24,24 +24,36 @@ enum osx_event_mask
 
 enum hotkey_flag
 {
-    Hotkey_Flag_Alt         = (1 << 0),
-    Hotkey_Flag_LAlt        = (1 << 1),
-    Hotkey_Flag_RAlt        = (1 << 2),
-    Hotkey_Flag_Shift       = (1 << 3),
-    Hotkey_Flag_LShift      = (1 << 4),
-    Hotkey_Flag_RShift      = (1 << 5),
-    Hotkey_Flag_Cmd         = (1 << 6),
-    Hotkey_Flag_LCmd        = (1 << 7),
-    Hotkey_Flag_RCmd        = (1 << 8),
-    Hotkey_Flag_Control     = (1 << 9),
+    Hotkey_Flag_Alt         = (1 <<  0),
+    Hotkey_Flag_LAlt        = (1 <<  1),
+    Hotkey_Flag_RAlt        = (1 <<  2),
+    Hotkey_Flag_Shift       = (1 <<  3),
+    Hotkey_Flag_LShift      = (1 <<  4),
+    Hotkey_Flag_RShift      = (1 <<  5),
+    Hotkey_Flag_Cmd         = (1 <<  6),
+    Hotkey_Flag_LCmd        = (1 <<  7),
+    Hotkey_Flag_RCmd        = (1 <<  8),
+    Hotkey_Flag_Control     = (1 <<  9),
     Hotkey_Flag_LControl    = (1 << 10),
     Hotkey_Flag_RControl    = (1 << 11),
     Hotkey_Flag_Fn          = (1 << 12),
     Hotkey_Flag_Passthrough = (1 << 13),
+    Hotkey_Flag_Activate    = (1 << 14),
     Hotkey_Flag_Hyper       = (Hotkey_Flag_Cmd |
                                Hotkey_Flag_Alt |
                                Hotkey_Flag_Shift |
                                Hotkey_Flag_Control)
+};
+
+#include "hashtable.h"
+
+struct mode
+{
+    int line;
+    int cursor;
+    char *name;
+    char *command;
+    struct table hotkey_map;
 };
 
 struct hotkey
@@ -49,6 +61,8 @@ struct hotkey
     uint32_t flags;
     uint32_t key;
     char *command;
+    int mode_count;
+    struct mode *mode_list[16];
 };
 
 static inline void
@@ -70,13 +84,15 @@ clear_flags(struct hotkey *hotkey, uint32_t flag)
     hotkey->flags &= ~flag;
 }
 
+bool same_mode(char *a, char *b);
+unsigned long hash_mode(char *key);
+
 bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map);
+bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
 void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey);
 
-struct table;
-void free_hotkeys(struct table *hotkey_map);
+void free_mode_map(struct table *mode_map);
 
 #endif

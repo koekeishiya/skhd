@@ -94,7 +94,7 @@ resolve_identifier_type(struct token token)
         }
     }
 
-    return Token_Unknown;
+    return Token_Identifier;
 }
 
 struct token
@@ -121,6 +121,8 @@ get_token(struct tokenizer *tokenizer)
     switch (c) {
     case '\0':{ token.type = Token_EndOfStream; } break;
     case '+': { token.type = Token_Plus;        } break;
+    case ',': { token.type = Token_Comma;       } break;
+    case '<': { token.type = Token_Insert;      } break;
     case '#': {
         eat_comment(tokenizer);
         token = get_token(tokenizer);
@@ -134,16 +136,33 @@ get_token(struct tokenizer *tokenizer)
             token.type = Token_Dash;
         }
     } break;
-    case ':': {
+    case ';': {
         eat_whitespace(tokenizer);
 
         token.text = tokenizer->at;
         token.line = tokenizer->line;
         token.cursor = tokenizer->cursor;
 
-        eat_command(tokenizer);
+        eat_identifier(tokenizer);
         token.length = tokenizer->at - token.text;
-        token.type = Token_Command;
+        token.type = Token_Activate;
+    } break;
+    case ':': {
+        if (*tokenizer->at && *tokenizer->at == ':') {
+            advance(tokenizer);
+            token.length = tokenizer->at - token.text;
+            token.type = Token_Decl;
+        } else {
+            eat_whitespace(tokenizer);
+
+            token.text = tokenizer->at;
+            token.line = tokenizer->line;
+            token.cursor = tokenizer->cursor;
+
+            eat_command(tokenizer);
+            token.length = tokenizer->at - token.text;
+            token.type = Token_Command;
+        }
     } break;
     default:  {
         if (c == '0' && *tokenizer->at == 'x') {

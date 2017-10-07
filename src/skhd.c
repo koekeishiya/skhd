@@ -42,7 +42,8 @@ extern bool CGSIsSecureEventInputSet();
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
 internal unsigned patch_version = 10;
-internal struct table hotkey_map;
+internal struct mode *current_mode;
+internal struct table mode_map;
 internal char *config_file;
 
 internal void
@@ -69,16 +70,19 @@ parse_config_helper(char *absolutepath)
 {
     struct parser parser;
     if (parser_init(&parser, absolutepath)) {
-        parse_config(&parser, &hotkey_map);
+        parser.mode_map = &mode_map;
+        parse_config(&parser);
         parser_destroy(&parser);
+        current_mode = table_find(&mode_map, "default");
     } else {
+        current_mode = NULL;
         warn("skhd: could not open file '%s'\n", absolutepath);
     }
 }
 
 internal HOTLOADER_CALLBACK(config_handler)
 {
-    free_hotkeys(&hotkey_map);
+    free_mode_map(&mode_map);
     parse_config_helper(absolutepath);
 }
 
@@ -92,11 +96,12 @@ internal EVENT_TAP_CALLBACK(key_handler)
         CGEventTapEnable(event_tap->handle, 1);
     } break;
     case kCGEventKeyDown: {
+        if (!current_mode) return event;
         uint32_t flags = CGEventGetFlags(event);
         uint32_t key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
         struct hotkey eventkey = { .flags = 0, .key = key };
         cgeventflags_to_hotkeyflags(flags, &eventkey);
-        bool result = find_and_exec_hotkey(&eventkey, &hotkey_map);
+        bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
         if (result) {
             return NULL;
         }
@@ -186,10 +191,10 @@ int main(int argc, char **argv)
         set_config_path();
     }
 
-    table_init(&hotkey_map,
-               131,
-               (table_hash_func) hash_hotkey,
-               (table_compare_func) same_hotkey);
+    table_init(&mode_map,
+               13,
+               (table_hash_func) hash_mode,
+               (table_compare_func) same_mode);
 
     printf("skhd: using config '%s'\n", config_file);
     parse_config_helper(config_file);

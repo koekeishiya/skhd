@@ -61,6 +61,29 @@ unsigned long hash_hotkey(struct hotkey *a)
     return a->key;
 }
 
+bool same_mode(char *a, char *b)
+{
+    while (*a && *b && *a == *b) {
+        ++a;
+        ++b;
+    }
+    return *a == '\0' && *b == '\0';
+}
+
+unsigned long hash_mode(char *key)
+{
+    unsigned long hash = 0, high;
+    while(*key) {
+        hash = (hash << 4) + *key++;
+        high = hash & 0xF0000000;
+        if(high) {
+            hash ^= (high >> 24);
+        }
+        hash &= ~high;
+    }
+    return hash;
+}
+
 internal bool
 fork_and_exec(char *command)
 {
@@ -81,30 +104,57 @@ fork_and_exec(char *command)
     return true;
 }
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *hotkey_map)
+bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode)
 {
     bool result = false;
     struct hotkey *hotkey;
-    if ((hotkey = table_find(hotkey_map, eventkey))) {
-        if (fork_and_exec(hotkey->command)) {
+    if ((hotkey = table_find(&(*current_mode)->hotkey_map, eventkey))) {
+        if (has_flags(hotkey, Hotkey_Flag_Activate)) {
+            *current_mode = table_find(mode_map, hotkey->command);
+            if ((*current_mode)->command) {
+                fork_and_exec((*current_mode)->command);
+            }
+            result = has_flags(hotkey, Hotkey_Flag_Passthrough) ? false : true;
+        } else if (fork_and_exec(hotkey->command)) {
             result = has_flags(hotkey, Hotkey_Flag_Passthrough) ? false : true;
         }
     }
     return result;
 }
 
-void free_hotkeys(struct table *hotkey_map)
+internal void
+free_hotkeys(struct table *hotkey_map)
 {
     int count;
     void **hotkeys = table_reset(hotkey_map, &count);
     for (int index = 0; index < count; ++index) {
         struct hotkey *hotkey = (struct hotkey *) hotkeys[index];
-        free(hotkey->command);
-        free(hotkey);
+        // the same hotkey can be added for multiple modes
+        // we need to know if this pointer was already freed
+        // by a mode that was destroyed before us
+        // free(hotkey->command);
+        // free(hotkey);
     }
 
     if (count) {
         free(hotkeys);
+    }
+}
+
+void free_mode_map(struct table *mode_map)
+{
+    int count;
+    void **modes = table_reset(mode_map, &count);
+    for (int index = 0; index < count; ++index) {
+        struct mode *mode = (struct mode *) modes[index];
+        if (mode->command) free(mode->command);
+        if (mode->name) free(mode->name);
+        free_hotkeys(&mode->hotkey_map);
+        free(mode);
+    }
+
+    if (count) {
+        free(modes);
     }
 }
 
