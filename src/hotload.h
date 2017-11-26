@@ -27,6 +27,6 @@ struct hotloader
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback);
 void hotloader_end(struct hotloader *hotloader);
-void hotloader_add_file(struct hotloader *hotloader, const char *file);
+void hotloader_add_file(struct hotloader *hotloader, char *file);
 
 #endif
