@@ -41,17 +41,16 @@ file_name(const char *file)
     return name;
 }
 
-internal bool
-resolve_symlink(char *file, char **real_path)
+internal char *
+resolve_symlink(char *file)
 {
     struct stat buffer;
     if (lstat(file, &buffer) != 0) {
-        return false;
+        return NULL;
     }
 
     if (!S_ISLNK(buffer.st_mode)) {
-        *real_path = file;
-        return true;
+        return file;
     }
 
     ssize_t size = buffer.st_size + 1;
@@ -60,12 +59,11 @@ resolve_symlink(char *file, char **real_path)
 
     if (read != -1) {
         result[read] = '\0';
-        *real_path = result;
-        return true;
+        return result;
     }
 
     free(result);
-    return false;
+    return NULL;
 }
 
 internal struct watched_file *
@@ -109,16 +107,13 @@ internal FSEVENT_CALLBACK(hotloader_handler)
 void hotloader_add_file(struct hotloader *hotloader, char *file)
 {
     if (!hotloader->enabled) {
-        char *real_path;
-        bool success = resolve_symlink(file, &real_path);
-
-        if (success) {
+        char *real_path = resolve_symlink(file);
+        if (real_path) {
             struct watched_file watch_info;
             watch_info.directory = file_directory(real_path);
             watch_info.filename = file_name(real_path);
 
             if (real_path != file) {
-                printf("hotload: symlink resolved, '%s' -> '%s'\n", file, real_path);
                 free(real_path);
             }
 
