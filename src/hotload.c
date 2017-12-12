@@ -41,39 +41,32 @@ file_name(const char *file)
     return name;
 }
 
-internal char *
-resolve_symlink(char *file, bool *is_symlink, bool *success)
+internal bool
+resolve_symlink(char *file, char **real_path)
 {
     struct stat buffer;
     if (lstat(file, &buffer) != 0) {
-        goto fail;
+        return false;
     }
 
-    if (S_ISLNK(buffer.st_mode)) {
-        ssize_t size = buffer.st_size + 1;
-        char *result = malloc(size);
-        ssize_t read = readlink(file, result, size);
+    if (!S_ISLNK(buffer.st_mode)) {
+        *real_path = file;
+        return true;
+    }
 
-        if (read == -1) {
-            free(result);
-            goto fail;
-        }
+    ssize_t size = buffer.st_size + 1;
+    char *result = malloc(size);
+    ssize_t read = readlink(file, result, size);
 
+    if (read != -1) {
         result[read] = '\0';
-        *is_symlink = true;
-        *success = true;
-        return result;
-    } else {
-        *is_symlink = false;
-        *success = true;
-        return file;
+        *real_path = result;
+        return true;
     }
 
-fail:
-    *success = false;
-    return NULL;
+    free(result);
+    return false;
 }
-
 
 internal struct watched_file *
 hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
@@ -116,15 +109,16 @@ internal FSEVENT_CALLBACK(hotloader_handler)
 void hotloader_add_file(struct hotloader *hotloader, char *file)
 {
     if (!hotloader->enabled) {
-        bool is_symlink, success;
-        char *real_path = resolve_symlink(file, &is_symlink, &success);
+        char *real_path;
+        bool success = resolve_symlink(file, &real_path);
 
         if (success) {
             struct watched_file watch_info;
             watch_info.directory = file_directory(real_path);
             watch_info.filename = file_name(real_path);
 
-            if (is_symlink) {
+            if (real_path != file) {
+                printf("hotload: symlink resolved, '%s' -> '%s'\n", file, real_path);
                 free(real_path);
             }
 
