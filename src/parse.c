@@ -155,7 +155,7 @@ parse_hotkey(struct parser *parser)
     if (parser_match(parser, Token_Modifier)) {
         hotkey->flags = parse_modifier(parser);
         if (parser->error) {
-            return NULL;
+            goto err;
         }
         found_modifier = 1;
     } else {
@@ -165,7 +165,7 @@ parse_hotkey(struct parser *parser)
     if (found_modifier) {
         if (!parser_match(parser, Token_Dash)) {
             parser_report_error(parser, "expected '-'");
-            return NULL;
+            goto err;
         }
     }
 
@@ -177,7 +177,7 @@ parse_hotkey(struct parser *parser)
         parse_key_literal(parser, hotkey);
     } else {
         parser_report_error(parser, "expected key-literal");
-        return NULL;
+        goto err;
     }
 
     if (parser_match(parser, Token_Arrow)) {
@@ -188,12 +188,16 @@ parse_hotkey(struct parser *parser)
         hotkey->command = parse_command(parser);
     } else {
         parser_report_error(parser, "expected ':' followed by command");
-        return NULL;
+        goto err;
     }
 
     printf("}\n");
 
     return hotkey;
+
+err:
+    free(hotkey);
+    return NULL;
 }
 
 void parse_config(struct parser *parser, struct table *hotkey_map)
@@ -204,12 +208,12 @@ void parse_config(struct parser *parser, struct table *hotkey_map)
             (parser_check(parser, Token_Literal)) ||
             (parser_check(parser, Token_Key_Hex)) ||
             (parser_check(parser, Token_Key))) {
-            hotkey = parse_hotkey(parser);
-            if (parser->error) {
+            if ((hotkey = parse_hotkey(parser))) {
+                table_add(hotkey_map, hotkey, hotkey);
+            } else if (parser->error) {
                 free_hotkeys(hotkey_map);
                 return;
             }
-            table_add(hotkey_map, hotkey, hotkey);
         } else {
             parser_report_error(parser, "expected modifier or key-literal");
             return;
