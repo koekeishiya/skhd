@@ -150,7 +150,7 @@ parse_hotkey(struct parser *parser)
     struct hotkey *hotkey = malloc(sizeof(struct hotkey));
     int found_modifier;
 
-    printf("(#%d) hotkey :: {\n", parser->current_token.line);
+    printf("hotkey :: #%d {\n", parser->current_token.line);
 
     if (parser_match(parser, Token_Modifier)) {
         hotkey->flags = parse_modifier(parser);
@@ -269,7 +269,7 @@ void parser_report_error(struct parser *parser, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    fprintf(stderr, "(#%d:%d) ", parser->current_token.line, parser->current_token.cursor);
+    fprintf(stderr, "#%d:%d error: ", parser->current_token.line, parser->current_token.cursor);
     vfprintf(stderr, format, args);
     fprintf(stderr, ", but got '%.*s'\n", parser->current_token.length, parser->current_token.text);
     va_end(args);
