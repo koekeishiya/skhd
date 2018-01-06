@@ -123,17 +123,21 @@ bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struc
 }
 
 internal void
-free_hotkeys(struct table *hotkey_map)
+free_hotkeys(struct table *hotkey_map, struct table *freed_pointers)
 {
     int count;
     void **hotkeys = table_reset(hotkey_map, &count);
+
     for (int index = 0; index < count; ++index) {
         struct hotkey *hotkey = (struct hotkey *) hotkeys[index];
-        // the same hotkey can be added for multiple modes
-        // we need to know if this pointer was already freed
-        // by a mode that was destroyed before us
-        // free(hotkey->command);
-        // free(hotkey);
+        if (table_find(freed_pointers, hotkey)) {
+            // we have already freed this pointer, do nothing!
+            // printf("info: %p has already been freed!\n", hotkey);
+        } else {
+            table_add(freed_pointers, hotkey, hotkey);
+            free(hotkey->command);
+            free(hotkey);
+        }
     }
 
     if (count) {
@@ -141,20 +145,32 @@ free_hotkeys(struct table *hotkey_map)
     }
 }
 
+unsigned long hash_pointer(struct hotkey *a) { return (unsigned long)a; }
+bool same_pointer(struct hotkey *a, struct hotkey *b) { return a == b; }
+
 void free_mode_map(struct table *mode_map)
 {
     int count;
+    struct table freed_pointers;
     void **modes = table_reset(mode_map, &count);
+
+    if (count) {
+        table_init(&freed_pointers, 13,
+                   (table_hash_func) hash_pointer,
+                   (table_compare_func) same_pointer);
+    }
+
     for (int index = 0; index < count; ++index) {
         struct mode *mode = (struct mode *) modes[index];
         if (mode->command) free(mode->command);
         if (mode->name) free(mode->name);
-        free_hotkeys(&mode->hotkey_map);
+        free_hotkeys(&mode->hotkey_map, &freed_pointers);
         free(mode);
     }
 
     if (count) {
         free(modes);
+        table_free(&freed_pointers);
     }
 }
 

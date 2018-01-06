@@ -1,4 +1,5 @@
 #include "hotload.h"
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,31 @@ file_name(const char *file)
     return name;
 }
 
+internal char *
+resolve_symlink(char *file)
+{
+    struct stat buffer;
+    if (lstat(file, &buffer) != 0) {
+        return NULL;
+    }
+
+    if (!S_ISLNK(buffer.st_mode)) {
+        return file;
+    }
+
+    ssize_t size = buffer.st_size + 1;
+    char *result = malloc(size);
+    ssize_t read = readlink(file, result, size);
+
+    if (read != -1) {
+        result[read] = '\0';
+        return result;
+    }
+
+    free(result);
+    return NULL;
+}
+
 internal struct watched_file *
 hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
 {
@@ -78,14 +104,24 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     }
 }
 
-void hotloader_add_file(struct hotloader *hotloader, const char *file)
+void hotloader_add_file(struct hotloader *hotloader, char *file)
 {
     if (!hotloader->enabled) {
-        struct watched_file watch_info;
-        watch_info.directory = file_directory(file);
-        watch_info.filename = file_name(file);
-        hotloader->watch_list[hotloader->watch_count++] = watch_info;
-        printf("hotload: watching file '%s' in directory '%s'\n", watch_info.filename, watch_info.directory);
+        char *real_path = resolve_symlink(file);
+        if (real_path) {
+            struct watched_file watch_info;
+            watch_info.directory = file_directory(real_path);
+            watch_info.filename = file_name(real_path);
+
+            if (real_path != file) {
+                free(real_path);
+            }
+
+            hotloader->watch_list[hotloader->watch_count++] = watch_info;
+            printf("hotload: watching file '%s' in directory '%s'\n", watch_info.filename, watch_info.directory);
+        } else {
+            fprintf(stderr, "hotload: could not watch file '%s'\n", file);
+        }
     }
 }
 
