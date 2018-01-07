@@ -191,8 +191,7 @@ int main(int argc, char **argv)
         set_config_path();
     }
 
-    table_init(&mode_map,
-               13,
+    table_init(&mode_map, 13,
                (table_hash_func) hash_mode,
                (table_compare_func) same_mode);
 
@@ -209,6 +208,5 @@ int main(int argc, char **argv)
     hotloader_begin(&hotloader, config_handler);
 
     CFRunLoopRun();
-
     return EXIT_SUCCESS;
 }
