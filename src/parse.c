@@ -15,8 +15,13 @@
 internal struct mode *
 init_default_mode(struct parser *parser)
 {
-    struct mode *default_mode = malloc(sizeof(struct mode));
+    struct mode *default_mode;
 
+    if ((default_mode = table_find(parser->mode_map, "default"))) {
+        return default_mode;
+    }
+
+    default_mode = malloc(sizeof(struct mode));
     default_mode->line = -1;
     default_mode->cursor = -1;
     default_mode->name = copy_string("default");
@@ -173,7 +178,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
     free(name);
 
     if (!mode && token_equals(identifier, "default")) {
-        mode = init_default_mode(parser);
+        mode = find_or_init_default_mode(parser);
     }
 
     if (!mode) {
@@ -216,11 +221,7 @@ parse_hotkey(struct parser *parser)
             goto err;
         }
     } else {
-        hotkey->mode_list[hotkey->mode_count] = table_find(parser->mode_map, "default");
-        if (!hotkey->mode_list[hotkey->mode_count]) {
-            hotkey->mode_list[hotkey->mode_count] = init_default_mode(parser);
-        }
-        hotkey->mode_count++;
+        hotkey->mode_list[hotkey->mode_count++] = find_or_init_default_mode(parser);
     }
 
     if ((found_modifier = parser_match(parser, Token_Modifier))) {
@@ -267,7 +268,6 @@ parse_hotkey(struct parser *parser)
     }
 
     printf("}\n");
-
     return hotkey;
 
 err:
