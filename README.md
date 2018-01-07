@@ -2,10 +2,6 @@
 
 **skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd**](https://github.com/koekeishiya/khd)
 (although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
-
-**skhd** uses a subset of the grammar that **khd** uses. In other words, **khd** is able to load and run **skhd** config files without having
-to make any changes to the file. This makes it very simple to migrate between **skhd** and **khd** on demand.
-
 **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
 **skhd** has an improved parser that is able to accurately identify both the line and character position of any symbol that does not
@@ -17,11 +13,10 @@ feature comparison between **skhd** and **khd**
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
 | hotload config file        | [x]  | [ ] |
-| store hotkey in hashmap    | [x]  | [ ] |
-| store hotkey in linked-list| [ ]  | [x] |
+| store hotkeys in hashmap   | [x]  | [ ] |
 | require unix domain socket | [ ]  | [x] |
 | hotkey passthrough         | [x]  | [x] |
-| modal hotkey-system        | [ ]  | [x] |
+| modal hotkey-system        | [x]  | [x] |
 | application specific hotkey| [ ]  | [x] |
 | modifier only hotkey       | [ ]  | [x] |
 | caps-lock as hotkey        | [ ]  | [x] |
@@ -76,12 +71,16 @@ A list of all built-in modifier and literal keywords can be found [here](https:/
 
 A hotkey is written according to the following rules:
 ```
-hotkey   = <keysym> ':' <command> |
-           <keysym> '->' ':' <command>
+hotkey   = <mode> '<' <action> | <action>
+
+mode     = 'name of mode' | <mode> ',' <mode>
+
+action   = <keysym> ':' <command> | <keysym> '->' ':' <command>
+           <keysym> ';' <mode>    | <keysym> '->' ';' <mode>
 
 keysym   = <mod> '-' <key> | <key>
 
-mod      = 'built-in mod keyword' | <mod> '+' <mod>
+mod      = 'modifier keyword' | <mod> '+' <mod>
 
 key      = <literal> | <keycode>
 
@@ -101,4 +100,29 @@ command  = command is executed through '$SHELL -c' and
            prepend '\' at the end of the previous line.
 
            an EOL character signifies the end of the bind.
+```
+
+A mode can be defined in two different ways:
+```
+# define mode 'switcher' with an on_enter command
+:: switcher : chunkc border::color 0xff24ccaa
+
+# define modes without an on_enter command
+:: swap
+:: focus
+```
+
+Modal sample:
+```
+# defines a new mode named 'test'
+:: test
+
+# from 'default' mode, activate mode 'test'
+cmd - x ; test
+
+# from 'test' mode, activate mode 'default'
+test < cmd - x ; default
+
+# launch a new terminal instance when in either 'default' or 'test' mode
+default, test < cmd - return : open -na /Applications/Terminal.app
 ```

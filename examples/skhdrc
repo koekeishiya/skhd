@@ -3,8 +3,12 @@
 #
 #                     A hotkey is written according to the following rules:
 #
-#                       hotkey   = <keysym> ':' <command> |
-#                                  <keysym> '->' ':' <command>
+#                       hotkey   = <mode> '<' <action> | <action>
+#
+#                       mode     = 'name of mode' | <mode> ',' <mode>
+#
+#                       action   = <keysym> ':' <command> | <keysym> '->' ':' <command>
+#                                  <keysym> ';' <mode>    | <keysym> '->' ';' <mode>
 #
 #                       keysym   = <mod> '-' <key> | <key>
 #
@@ -28,6 +32,24 @@
 #                                  prepend '\' at the end of the previous line.
 #
 #                                  an EOL character signifies the end of the bind.
+#
+#
+#  NOTE(koekeishiya): Modal operations
+#
+#                     defines a new mode 'switcher' with an on_enter command
+#                       :: switcher : chunkc border::color 0xff24ccaa
+#
+#                     defines a new mode named 'test'
+#                       :: test
+#
+#                     from 'default' mode, activate mode 'test'
+#                       cmd - x ; test
+#
+#                     from 'test' mode, activate mode 'default'
+#                       test < cmd - x ; default
+#
+#                     launch a new terminal instance when in either 'default' or 'test' mode
+#                       default, test < cmd - return : open -na /Applications/Terminal.app
 
 
 # open terminal, blazingly fast compared to iTerm/Hyper
