@@ -13,7 +13,7 @@
 #define internal static
 
 internal struct mode *
-init_default_mode(struct parser *parser)
+find_or_init_default_mode(struct parser *parser)
 {
     struct mode *default_mode;
 
