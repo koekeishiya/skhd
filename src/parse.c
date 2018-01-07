@@ -179,9 +179,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
 
     if (!mode && token_equals(identifier, "default")) {
         mode = find_or_init_default_mode(parser);
-    }
-
-    if (!mode) {
+    } else if (!mode) {
         parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
         return;
     }
@@ -194,7 +192,6 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
             parse_mode(parser, hotkey);
         } else {
             parser_report_error(parser, Error_Unexpected_Token, "expected identifier");
-            return;
         }
     }
 }
