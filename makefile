@@ -11,6 +11,9 @@ all: clean $(BINS)
 install: BUILD_FLAGS=-std=c99 -O3
 install: clean $(BINS)
 
+segfault: BUILD_FLAGS=-O0 -g -Wall -std=c99 -D_FORTIFY_SOURCE=2 -fstack-protector-strong --param ssp-buffer-size=4 -fPIC -fno-strict-overflow -Wformat -Wformat-security -Werror=format-security
+segfault: clean $(BINS)
+
 clean:
 	rm -rf $(BUILD_PATH)
 
