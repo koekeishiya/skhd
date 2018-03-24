@@ -30,10 +30,10 @@ internal int
 hash_keymap(const char *a)
 {
     unsigned long hash = 0, high;
-    while(*a) {
+    while (*a) {
         hash = (hash << 4) + *a++;
         high = hash & 0xF0000000;
-        if(high) {
+        if (high) {
             hash ^= (high >> 24);
         }
         hash &= ~high;
