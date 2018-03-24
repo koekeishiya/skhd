@@ -49,14 +49,16 @@ cfstring_from_keycode(CGKeyCode keycode)
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
 uint32_t keycode_from_char(char key)
 {
-    uint32_t keycode = 0;
+    uint32_t result = 0;
+    uint32_t *keycode = &result;
+
     local_persist CFMutableDictionaryRef keycode_map = NULL;
     if (!keycode_map) {
         keycode_map = CFDictionaryCreateMutable(kCFAllocatorDefault, 128, &kCFCopyStringDictionaryKeyCallBacks, NULL);
         for (unsigned index = 0; index < 128; ++index) {
             CFStringRef key_string = cfstring_from_keycode(index);
             if (key_string) {
-                CFDictionaryAddValue(keycode_map, key_string, (const void *)index);
+                CFDictionaryAddValue(keycode_map, key_string, (const void *) index);
                 CFRelease(key_string);
             }
         }
@@ -64,9 +66,9 @@ uint32_t keycode_from_char(char key)
 
     UniChar uni_char = key;
     CFStringRef char_str = CFStringCreateWithCharacters(kCFAllocatorDefault, &uni_char, 1);
-    CFDictionaryGetValueIfPresent(keycode_map, char_str, (const void **)&keycode);
+    CFDictionaryGetValueIfPresent(keycode_map, char_str, (const void **) &keycode);
     CFRelease(char_str);
 
-    return keycode;
+    return result;
 }
 #pragma clang diagnostic pop
