@@ -52,40 +52,33 @@ same_keymap(const char *a, const char *b)
 }
 
 internal CFStringRef
-cfstring_from_keycode(CGKeyCode keycode)
+cfstring_from_keycode(UCKeyboardLayout *keyboard_layout, CGKeyCode keycode)
 {
-    TISInputSourceRef keyboard = TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
-    CFDataRef uchr = (CFDataRef) TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
-    CFRelease(keyboard);
+    UInt32 dead_key_state = 0;
+    UniCharCount max_string_length = 255;
+    UniCharCount string_length = 0;
+    UniChar unicode_string[max_string_length];
 
-    UCKeyboardLayout *keyboard_layout = (UCKeyboardLayout *) CFDataGetBytePtr(uchr);
-    if (keyboard_layout) {
-        UInt32 dead_key_state = 0;
-        UniCharCount max_string_length = 255;
-        UniCharCount string_length = 0;
-        UniChar unicode_string[max_string_length];
+    OSStatus status = UCKeyTranslate(keyboard_layout, keycode,
+                                     kUCKeyActionDown, 0,
+                                     LMGetKbdType(), 0,
+                                     &dead_key_state,
+                                     max_string_length,
+                                     &string_length,
+                                     unicode_string);
 
-        OSStatus status = UCKeyTranslate(keyboard_layout, keycode,
-                                         kUCKeyActionDown, 0,
-                                         LMGetKbdType(), 0,
-                                         &dead_key_state,
-                                         max_string_length,
-                                         &string_length,
-                                         unicode_string);
+    if (string_length == 0 && dead_key_state) {
+        status = UCKeyTranslate(keyboard_layout, kVK_Space,
+                                kUCKeyActionDown, 0,
+                                LMGetKbdType(), 0,
+                                &dead_key_state,
+                                max_string_length,
+                                &string_length,
+                                unicode_string);
+    }
 
-        if (string_length == 0 && dead_key_state) {
-            status = UCKeyTranslate(keyboard_layout, kVK_Space,
-                                    kUCKeyActionDown, 0,
-                                    LMGetKbdType(), 0,
-                                    &dead_key_state,
-                                    max_string_length,
-                                    &string_length,
-                                    unicode_string);
-        }
-
-        if (string_length > 0 && status == noErr) {
-            return CFStringCreateWithCharacters(NULL, unicode_string, string_length);
-        }
+    if (string_length > 0 && status == noErr) {
+        return CFStringCreateWithCharacters(NULL, unicode_string, string_length);
     }
 
     return NULL;
@@ -93,16 +86,22 @@ cfstring_from_keycode(CGKeyCode keycode)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
-internal void
-initialize_keycode_map()
+bool initialize_keycode_map()
 {
+    TISInputSourceRef keyboard = TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
+    CFDataRef uchr = (CFDataRef) TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+    CFRelease(keyboard);
+
+    UCKeyboardLayout *keyboard_layout = (UCKeyboardLayout *) CFDataGetBytePtr(uchr);
+    if (!keyboard_layout) return false;
+
     table_init(&keymap_table,
                131,
                (table_hash_func) hash_keymap,
                (table_compare_func) same_keymap);
 
     for (unsigned index = 0; index < 128; ++index) {
-        CFStringRef key_string = cfstring_from_keycode(index);
+        CFStringRef key_string = cfstring_from_keycode(keyboard_layout, index);
         if (!key_string) continue;
 
         char *c_key_string = copy_cf_string_to_c(key_string);
@@ -111,20 +110,14 @@ initialize_keycode_map()
 
         table_add(&keymap_table, c_key_string, (void *)index);
     }
+
+    return true;
 }
 #pragma clang diagnostic pop
 
 uint32_t keycode_from_char(char key)
 {
-    uint32_t keycode = 0;
-    char lookup_key[2];
-
-    if (!keymap_table.count) {
-        initialize_keycode_map();
-    }
-
-    snprintf(lookup_key, 2, "%c", key);
-    keycode = (uint32_t) table_find(&keymap_table, &lookup_key);
-
+    char lookup_key[] = { key, '\0' };
+    uint32_t keycode = (uint32_t) table_find(&keymap_table, &lookup_key);
     return keycode;
 }

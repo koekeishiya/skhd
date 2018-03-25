@@ -179,11 +179,16 @@ int main(int argc, char **argv)
     }
 
     if (!check_privileges()) {
-        error("skhd: must be run with accessibility access.\n");
+        error("skhd: must be run with accessibility access! abort..\n");
     }
 
     if (!config_file) {
         set_config_path();
+    }
+    printf("skhd: using config '%s'\n", config_file);
+
+    if (!initialize_keycode_map()) {
+        error("skhd: could not initialize keycode map! abort..\n");
     }
 
     table_init(&hotkey_map,
@@ -191,7 +196,6 @@ int main(int argc, char **argv)
                (table_hash_func) hash_hotkey,
                (table_compare_func) same_hotkey);
 
-    printf("skhd: using config '%s'\n", config_file);
     parse_config_helper(config_file);
     signal(SIGCHLD, SIG_IGN);
 
@@ -204,6 +208,5 @@ int main(int argc, char **argv)
     hotloader_begin(&hotloader, config_handler);
 
     CFRunLoopRun();
-
     return EXIT_SUCCESS;
 }
