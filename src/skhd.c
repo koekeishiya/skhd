@@ -41,9 +41,10 @@ extern bool CGSIsSecureEventInputSet();
 
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
-internal unsigned patch_version = 10;
-internal struct mode *current_mode;
+internal unsigned patch_version = 14;
+internal struct table hotkey_map;
 internal struct table mode_map;
+internal struct mode *current_mode;
 internal char *config_file;
 
 internal void
@@ -184,7 +185,11 @@ int main(int argc, char **argv)
     }
 
     if (!check_privileges()) {
-        error("skhd: must be run with accessibility access.\n");
+        error("skhd: must be run with accessibility access! abort..\n");
+    }
+
+    if (!initialize_keycode_map()) {
+        error("skhd: could not initialize keycode map! abort..\n");
     }
 
     if (!config_file) {

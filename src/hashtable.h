@@ -89,7 +89,9 @@ void table_add(struct table *table, void *key, void *value)
 {
     struct bucket **bucket = table_get_bucket(table, key);
     if (*bucket) {
-        (*bucket)->value = value;
+        if (!(*bucket)->value) {
+            (*bucket)->value = value;
+        }
     } else {
         *bucket = table_new_bucket(key, value);
         ++table->count;

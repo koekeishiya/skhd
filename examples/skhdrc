@@ -170,7 +170,7 @@ alt - d : chunkc tiling::window --toggle parent
 # toggle window split type
 alt - e : chunkc tiling::window --toggle split
 
-# toggle window fading
+# toggle window fade
 alt - q : chunkc tiling::window --toggle fade
 
 # float / unfloat window and center on screen
