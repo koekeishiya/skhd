@@ -31,13 +31,16 @@
 extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
-#if 0
+#if 1
 #define BEGIN_TIMED_BLOCK() \
     clock_t timed_block_begin = clock()
 #define END_TIMED_BLOCK() \
     clock_t timed_block_end = clock(); \
-    double timed_block_elapsed = (timed_block_end -timed_block_begin) / (double)CLOCKS_PER_SEC; \
-    printf("elapsed time: %f\n", timed_block_elapsed)
+    double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
+    printf("elapsed time: %.4fms\n", timed_block_elapsed)
+#else
+#define BEGIN_TIMED_BLOCK()
+#define END_TIMED_BLOCK()
 #endif
 
 internal unsigned major_version = 0;
@@ -98,11 +101,10 @@ internal EVENT_TAP_CALLBACK(key_handler)
     } break;
     case kCGEventKeyDown: {
         if (!current_mode) return event;
-        uint32_t flags = CGEventGetFlags(event);
-        uint32_t key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
-        struct hotkey eventkey = { .flags = 0, .key = key };
-        cgeventflags_to_hotkeyflags(flags, &eventkey);
+        BEGIN_TIMED_BLOCK();
+        struct hotkey eventkey = create_eventkey(event);
         bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
+        END_TIMED_BLOCK();
         if (result) {
             return NULL;
         }

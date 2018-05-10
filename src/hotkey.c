@@ -106,99 +106,99 @@ fork_and_exec(char *command)
 
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode)
 {
-    bool result = false;
     struct hotkey *hotkey;
     if ((hotkey = table_find(&(*current_mode)->hotkey_map, eventkey))) {
+        bool capture = (*current_mode)->capture || !has_flags(hotkey, Hotkey_Flag_Passthrough);
+        char *command = hotkey->command;
+
         if (has_flags(hotkey, Hotkey_Flag_Activate)) {
             *current_mode = table_find(mode_map, hotkey->command);
-            if ((*current_mode)->command) {
-                fork_and_exec((*current_mode)->command);
-            }
-            result = has_flags(hotkey, Hotkey_Flag_Passthrough) ? false : true;
-        } else if (fork_and_exec(hotkey->command)) {
-            result = has_flags(hotkey, Hotkey_Flag_Passthrough) ? false : true;
+            command = (*current_mode)->command;
+            if (!command) return capture;
         }
+
+        if (fork_and_exec(command)) return capture;
     }
-    return result;
+    return false;
 }
-
-internal void
-free_hotkeys(struct table *hotkey_map, struct table *freed_pointers)
-{
-    int count;
-    void **hotkeys = table_reset(hotkey_map, &count);
-
-    for (int index = 0; index < count; ++index) {
-        struct hotkey *hotkey = (struct hotkey *) hotkeys[index];
-        if (table_find(freed_pointers, hotkey)) {
-            // we have already freed this pointer, do nothing!
-            // printf("info: %p has already been freed!\n", hotkey);
-        } else {
-            table_add(freed_pointers, hotkey, hotkey);
-            free(hotkey->command);
-            free(hotkey);
-        }
-    }
-
-    if (count) {
-        free(hotkeys);
-    }
-}
-
-unsigned long hash_pointer(struct hotkey *a) { return (unsigned long)a; }
-bool same_pointer(struct hotkey *a, struct hotkey *b) { return a == b; }
 
 void free_mode_map(struct table *mode_map)
 {
-    int count;
-    struct table freed_pointers;
-    void **modes = table_reset(mode_map, &count);
+    int mode_count;
+    void **modes = table_reset(mode_map, &mode_count);
+    if (!mode_count) return;
 
-    if (count) {
-        table_init(&freed_pointers, 13,
-                   (table_hash_func) hash_pointer,
-                   (table_compare_func) same_pointer);
-    }
+    struct hotkey **freed_pointers = NULL;
+    for (int mode_index = 0; mode_index < mode_count; ++mode_index) {
+        struct mode *mode = (struct mode *) modes[mode_index];
+        int hk_count;
+        void **hotkeys = table_reset(&mode->hotkey_map, &hk_count);
 
-    for (int index = 0; index < count; ++index) {
-        struct mode *mode = (struct mode *) modes[index];
+        for (int hk_index = 0; hk_index < hk_count; ++hk_index) {
+            struct hotkey *hotkey = (struct hotkey *) hotkeys[hk_index];
+            for (int i = 0; i < buf_len(freed_pointers); ++i) {
+                if (freed_pointers[i] == hotkey) {
+                    continue;
+                }
+            }
+            buf_push(freed_pointers, hotkey);
+            buf_free(hotkey->mode_list);
+            free(hotkey->command);
+            free(hotkey);
+        }
+
+        if (hk_count) free(hotkeys);
         if (mode->command) free(mode->command);
         if (mode->name) free(mode->name);
-        free_hotkeys(&mode->hotkey_map, &freed_pointers);
         free(mode);
     }
 
-    if (count) {
+    if (mode_count) {
         free(modes);
-        table_free(&freed_pointers);
+        buf_free(freed_pointers);
     }
 }
 
 internal void
-cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags flags, struct hotkey *eventkey, int mod)
+cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags eventflags, uint32_t *flags, int mod)
 {
     enum osx_event_mask mask  = cgevent_lrmod_flag[mod];
     enum osx_event_mask lmask = cgevent_lrmod_flag[mod + LMOD_OFFS];
     enum osx_event_mask rmask = cgevent_lrmod_flag[mod + RMOD_OFFS];
 
-    if ((flags & mask) == mask) {
-        bool left  = (flags & lmask) == lmask;
-        bool right = (flags & rmask) == rmask;
+    if ((eventflags & mask) == mask) {
+        bool left  = (eventflags & lmask) == lmask;
+        bool right = (eventflags & rmask) == rmask;
 
-        if (left)            add_flags(eventkey, hotkey_lrmod_flag[mod + LMOD_OFFS]);
-        if (right)           add_flags(eventkey, hotkey_lrmod_flag[mod + RMOD_OFFS]);
-        if (!left && !right) add_flags(eventkey, hotkey_lrmod_flag[mod]);
+        if (left)            *flags |= hotkey_lrmod_flag[mod + LMOD_OFFS];
+        if (right)           *flags |= hotkey_lrmod_flag[mod + RMOD_OFFS];
+        if (!left && !right) *flags |= hotkey_lrmod_flag[mod];
     }
 }
 
-void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey)
+internal uint32_t
+cgevent_flags_to_hotkey_flags(uint32_t eventflags)
 {
-    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_ALT);
-    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_CMD);
-    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_CTRL);
-    cgevent_lrmod_flag_to_hotkey_lrmod_flag(flags, eventkey, LRMOD_SHIFT);
+    uint32_t flags = 0;
+
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_ALT);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_CMD);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_CTRL);
+    cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_SHIFT);
 
     if ((flags & Event_Mask_Fn) == Event_Mask_Fn) {
-        add_flags(eventkey, Hotkey_Flag_Fn);
+        flags |= Hotkey_Flag_Fn;
     }
+
+    return flags;
+}
+
+struct hotkey
+create_eventkey(CGEventRef event)
+{
+    struct hotkey eventkey = {
+        .key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode),
+        .flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event))
+    };
+    return eventkey;
 }

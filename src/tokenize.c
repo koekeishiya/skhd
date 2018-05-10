@@ -123,6 +123,7 @@ get_token(struct tokenizer *tokenizer)
     case '+': { token.type = Token_Plus;        } break;
     case ',': { token.type = Token_Comma;       } break;
     case '<': { token.type = Token_Insert;      } break;
+    case '@': { token.type = Token_Capture;     } break;
     case '#': {
         eat_comment(tokenizer);
         token = get_token(tokenizer);

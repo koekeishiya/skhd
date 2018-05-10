@@ -53,6 +53,7 @@ struct mode
     int cursor;
     char *name;
     char *command;
+    bool capture;
     struct table hotkey_map;
 };
 
@@ -89,9 +90,8 @@ unsigned long hash_mode(char *key);
 bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
 
+struct hotkey create_eventkey(CGEventRef event);
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
-void cgeventflags_to_hotkeyflags(CGEventFlags flags, struct hotkey *eventkey);
-
 void free_mode_map(struct table *mode_map);
 
 #endif

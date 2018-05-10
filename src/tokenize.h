@@ -43,6 +43,7 @@ enum token_type
     Token_Plus,
     Token_Dash,
     Token_Arrow,
+    Token_Capture,
 
     Token_Unknown,
     Token_EndOfStream,

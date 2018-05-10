@@ -30,6 +30,7 @@ find_or_init_default_mode(struct parser *parser)
                (table_hash_func) hash_hotkey,
                (table_compare_func) same_hotkey);
 
+    default_mode->capture = false;
     default_mode->command = NULL;
     table_add(parser->mode_map, default_mode->name, default_mode);
 
@@ -285,6 +286,12 @@ parse_mode_decl(struct parser *parser)
     table_init(&mode->hotkey_map, 131,
                (table_hash_func) hash_hotkey,
                (table_compare_func) same_hotkey);
+
+    if (parser_match(parser, Token_Capture)) {
+        mode->capture = true;
+    } else {
+        mode->capture = false;
+    }
 
     if (parser_match(parser, Token_Command)) {
         mode->command = copy_string_count(parser->previous_token.text, parser->previous_token.length);
