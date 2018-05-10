@@ -184,7 +184,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
         return;
     }
 
-    hotkey->mode_list[hotkey->mode_count++] = mode;
+    buf_push(hotkey->mode_list, mode);
     printf("\tmode: '%s'\n", mode->name);
 
     if (parser_match(parser, Token_Comma)) {
@@ -212,13 +212,13 @@ parse_hotkey(struct parser *parser)
         }
     }
 
-    if (hotkey->mode_count > 0) {
+    if (buf_len(hotkey->mode_list) > 0) {
         if (!parser_match(parser, Token_Insert)) {
             parser_report_error(parser, Error_Unexpected_Token, "expected '<'");
             goto err;
         }
     } else {
-        hotkey->mode_list[hotkey->mode_count++] = find_or_init_default_mode(parser);
+        buf_push(hotkey->mode_list, find_or_init_default_mode(parser));
     }
 
     if ((found_modifier = parser_match(parser, Token_Modifier))) {
@@ -330,7 +330,7 @@ void parse_config(struct parser *parser)
             (parser_check(parser, Token_Key_Hex)) ||
             (parser_check(parser, Token_Key))) {
             if ((hotkey = parse_hotkey(parser))) {
-                for (int i = 0; i < hotkey->mode_count; ++i) {
+                for (int i = 0; i < buf_len(hotkey->mode_list); ++i) {
                     mode = hotkey->mode_list[i];
                     table_add(&mode->hotkey_map, hotkey, hotkey);
                 }

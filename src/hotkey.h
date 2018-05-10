@@ -61,8 +61,7 @@ struct hotkey
     uint32_t flags;
     uint32_t key;
     char *command;
-    int mode_count;
-    struct mode *mode_list[16];
+    struct mode **mode_list;
 };
 
 static inline void
