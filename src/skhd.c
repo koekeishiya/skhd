@@ -29,7 +29,7 @@
 extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
-#if 0
+#if 1
 #define BEGIN_TIMED_BLOCK() \
     clock_t timed_block_begin = clock()
 #define END_TIMED_BLOCK() \

@@ -83,7 +83,7 @@ unsigned long hash_mode(char *key)
     return hash;
 }
 
-internal bool
+internal void
 fork_and_exec(char *command)
 {
     local_persist char arg[] = "-c";
@@ -99,26 +99,32 @@ fork_and_exec(char *command)
         int status_code = execvp(exec[0], exec);
         exit(status_code);
     }
-
-    return true;
 }
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode)
+internal inline bool
+passthrough(struct hotkey *hotkey)
 {
-    struct hotkey *hotkey;
-    if ((hotkey = table_find(&(*current_mode)->hotkey_map, eventkey))) {
-        bool capture = (*current_mode)->capture || !has_flags(hotkey, Hotkey_Flag_Passthrough);
-        char *command = hotkey->command;
+    return !has_flags(hotkey, Hotkey_Flag_Passthrough);
+}
 
-        if (has_flags(hotkey, Hotkey_Flag_Activate)) {
-            *current_mode = table_find(mode_map, hotkey->command);
-            command = (*current_mode)->command;
-            if (!command) return capture;
+internal inline struct hotkey *
+find_hotkey(struct mode *mode, struct hotkey *hotkey)
+{
+    return table_find(&mode->hotkey_map, hotkey);
+}
+
+bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m)
+{
+    bool c = (*m)->capture;
+    for (struct hotkey *h = find_hotkey(*m, k); h; c |= passthrough(h), h = 0) {
+        char *cmd = h->command;
+        if (has_flags(h, Hotkey_Flag_Activate)) {
+            *m = table_find(t, cmd);
+            cmd = (*m)->command;
         }
-
-        if (fork_and_exec(command)) return capture;
+        if (cmd) fork_and_exec(cmd);
     }
-    return false;
+    return c;
 }
 
 void free_mode_map(struct table *mode_map)
@@ -137,7 +143,7 @@ void free_mode_map(struct table *mode_map)
 
             for (int i = 0; i < buf_len(freed_pointers); ++i) {
                 if (freed_pointers[i] == hotkey) {
-                    continue;
+                    goto next;
                 }
             }
 
@@ -145,6 +151,7 @@ void free_mode_map(struct table *mode_map)
             buf_free(hotkey->mode_list);
             free(hotkey->command);
             free(hotkey);
+next:;
         }
 
         if (hk_count) free(hotkeys);

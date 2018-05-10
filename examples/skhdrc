@@ -34,23 +34,40 @@
 #                                  an EOL character signifies the end of the bind.
 #
 #
-#  NOTE(koekeishiya): Modal operations
+#  NOTE(koekeishiya): A mode is declared according to the following rules:
 #
-#                     defines a new mode 'switcher' with an on_enter command
-#                       :: switcher : chunkc border::color 0xff24ccaa
+#                       mode_decl = '::' <name> '@' ':' <command> | '::' <name> ':' <command> |
+#                                   '::' <name> '@'               | '::' <name>
 #
-#                     defines a new mode named 'test'
-#                       :: test
+#                       name      = desired name for this mode,
 #
-#                     from 'default' mode, activate mode 'test'
-#                       cmd - x ; test
+#                       @         = capture keypresses regardless of being bound to an action
 #
-#                     from 'test' mode, activate mode 'default'
-#                       test < cmd - x ; default
+#                       command  = command is executed through '$SHELL -c' and
+#                                  follows valid shell syntax. if the $SHELL environment
+#                                  variable is not set, it will default to '/bin/bash'.
+#                                  when bash is used, the ';' delimeter can be specified
+#                                  to chain commands.
 #
-#                     launch a new terminal instance when in either 'default' or 'test' mode
-#                       default, test < cmd - return : open -na /Applications/Terminal.app
+#                                  to allow a command to extend into multiple lines,
+#                                  prepend '\' at the end of the previous line.
+#
+#                                  an EOL character signifies the end of the bind.
 
+# add an on_enter command to the default mode
+# :: default : chunkc border::color 0xff775759
+#
+# defines a new mode 'test' with an on_enter command, that captures keypresses
+# :: test @ : chunkc border::color 0xff24ccaa
+#
+# from 'default' mode, activate mode 'test'
+# cmd - x ; test
+#
+# from 'test' mode, activate mode 'default'
+# test < cmd - x ; default
+#
+# launch a new terminal instance when in either 'default' or 'test' mode
+# default, test < cmd - return : open -na /Applications/Terminal.app
 
 # open terminal, blazingly fast compared to iTerm/Hyper
 cmd - return : open -na /Applications/Kitty.app
