@@ -6,13 +6,11 @@
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <Carbon/Carbon.h>
 
 #define HASHTABLE_IMPLEMENTATION
 #include "hashtable.h"
 #include "sbuffer.h"
-
 #include "hotload.h"
 #include "event_tap.h"
 #include "locale.h"
@@ -46,8 +44,8 @@ extern bool CGSIsSecureEventInputSet();
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
 internal unsigned patch_version = 14;
-internal struct table mode_map;
 internal struct mode *current_mode;
+internal struct table mode_map;
 internal char *config_file;
 
 internal void
@@ -198,11 +196,8 @@ int main(int argc, char **argv)
         set_config_path();
     }
 
-    table_init(&mode_map, 13,
-               (table_hash_func) hash_mode,
-               (table_compare_func) same_mode);
-
     printf("skhd: using config '%s'\n", config_file);
+    table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
     parse_config_helper(config_file);
     signal(SIGCHLD, SIG_IGN);
 

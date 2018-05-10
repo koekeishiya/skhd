@@ -1,5 +1,4 @@
 #include "hotkey.h"
-#include <stdlib.h>
 
 #define internal static
 #define local_persist static
@@ -124,23 +123,24 @@ bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struc
 
 void free_mode_map(struct table *mode_map)
 {
+    struct hotkey **freed_pointers = NULL;
+
     int mode_count;
     void **modes = table_reset(mode_map, &mode_count);
-    if (!mode_count) return;
-
-    struct hotkey **freed_pointers = NULL;
     for (int mode_index = 0; mode_index < mode_count; ++mode_index) {
         struct mode *mode = (struct mode *) modes[mode_index];
+
         int hk_count;
         void **hotkeys = table_reset(&mode->hotkey_map, &hk_count);
-
         for (int hk_index = 0; hk_index < hk_count; ++hk_index) {
             struct hotkey *hotkey = (struct hotkey *) hotkeys[hk_index];
+
             for (int i = 0; i < buf_len(freed_pointers); ++i) {
                 if (freed_pointers[i] == hotkey) {
                     continue;
                 }
             }
+
             buf_push(freed_pointers, hotkey);
             buf_free(hotkey->mode_list);
             free(hotkey->command);
