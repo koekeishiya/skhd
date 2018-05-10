@@ -98,13 +98,13 @@ internal EVENT_TAP_CALLBACK(key_handler)
     } break;
     case kCGEventKeyDown: {
         if (!current_mode) return event;
+
         BEGIN_TIMED_BLOCK();
         struct hotkey eventkey = create_eventkey(event);
         bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
         END_TIMED_BLOCK();
-        if (result) {
-            return NULL;
-        }
+
+        if (result) return NULL;
     } break;
     }
     return event;
