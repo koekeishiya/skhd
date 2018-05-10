@@ -193,7 +193,7 @@ cgevent_flags_to_hotkey_flags(uint32_t eventflags)
     cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_CTRL);
     cgevent_lrmod_flag_to_hotkey_lrmod_flag(eventflags, &flags, LRMOD_SHIFT);
 
-    if ((flags & Event_Mask_Fn) == Event_Mask_Fn) {
+    if ((eventflags & Event_Mask_Fn) == Event_Mask_Fn) {
         flags |= Hotkey_Flag_Fn;
     }
 
