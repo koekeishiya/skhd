@@ -33,6 +33,9 @@
 # open terminal, blazingly fast compared to iTerm/Hyper
 cmd - return : open -na /Applications/Kitty.app
 
+# open qutebrowser
+cmd + shift - return : ~/Scripts/qtb.sh
+
 # close focused window
 alt - w : chunkc tiling::window --close
 
