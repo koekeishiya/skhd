@@ -4,25 +4,17 @@
 (although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
-**skhd** has an improved parser that is able to accurately identify both the line and character position of any symbol that does not
-follow the correct grammar rules for defining a hotkey. If a syntax error is detected during parsing, the parser will print the error and abort.
-**skhd** will still continue to run and when the syntax error has been fixed, it will automatically reload and reparse the config file.
-
 feature comparison between **skhd** and **khd**
 
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
 | hotload config file        | [x]  | [ ] |
-| store hotkeys in hashmap   | [x]  | [ ] |
-| require unix domain socket | [ ]  | [x] |
 | hotkey passthrough         | [x]  | [x] |
 | modal hotkey-system        | [x]  | [x] |
 | application specific hotkey| [ ]  | [x] |
 | modifier only hotkey       | [ ]  | [x] |
 | caps-lock as hotkey        | [ ]  | [x] |
 | mouse-buttons as hotkey    | [ ]  | [x] |
-| emit keypress              | [ ]  | [x] |
-| autowrite text             | [ ]  | [x] |
 
 ### Install
 
@@ -58,7 +50,6 @@ Requires xcode-8 command-line tools.
 
 -c | --config: Specify location of config file
     skhd -c ~/.skhdrc
-
 ```
 
 ### Configuration
@@ -102,27 +93,24 @@ command  = command is executed through '$SHELL -c' and
            an EOL character signifies the end of the bind.
 ```
 
-A mode can be defined in two different ways:
-```
-# define mode 'switcher' with an on_enter command
-:: switcher : chunkc border::color 0xff24ccaa
-
-# define modes without an on_enter command
-:: swap
-:: focus
+A mode is declared according to the following rules:
 ```
 
-Modal sample:
-```
-# defines a new mode named 'test'
-:: test
+mode_decl = '::' <name> '@' ':' <command> | '::' <name> ':' <command> |
+            '::' <name> '@'               | '::' <name>
 
-# from 'default' mode, activate mode 'test'
-cmd - x ; test
+name      = desired name for this mode,
 
-# from 'test' mode, activate mode 'default'
-test < cmd - x ; default
+@         = capture keypresses regardless of being bound to an action
 
-# launch a new terminal instance when in either 'default' or 'test' mode
-default, test < cmd - return : open -na /Applications/Terminal.app
+command  = command is executed through '$SHELL -c' and
+           follows valid shell syntax. if the $SHELL environment
+           variable is not set, it will default to '/bin/bash'.
+           when bash is used, the ';' delimeter can be specified
+           to chain commands.
+
+           to allow a command to extend into multiple lines,
+           prepend '\' at the end of the previous line.
+
+           an EOL character signifies the end of the bind.
 ```
