@@ -44,6 +44,7 @@ extern bool CGSIsSecureEventInputSet();
 internal unsigned major_version = 0;
 internal unsigned minor_version = 0;
 internal unsigned patch_version = 14;
+
 internal struct mode *current_mode;
 internal struct table mode_map;
 internal char *config_file;
@@ -71,15 +72,13 @@ internal void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
-    if (parser_init(&parser, absolutepath)) {
-        parser.mode_map = &mode_map;
+    if (parser_init(&parser, &mode_map, absolutepath)) {
         parse_config(&parser);
         parser_destroy(&parser);
-        current_mode = table_find(&mode_map, "default");
     } else {
-        current_mode = NULL;
         warn("skhd: could not open file '%s'\n", absolutepath);
     }
+    current_mode = table_find(&mode_map, "default");
 }
 
 internal HOTLOADER_CALLBACK(config_handler)

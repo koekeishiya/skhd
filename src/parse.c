@@ -415,11 +415,12 @@ void parser_report_error(struct parser *parser, enum parse_error_type error_type
     parser->error = true;
 }
 
-bool parser_init(struct parser *parser, char *file)
+bool parser_init(struct parser *parser, struct table *mode_map, char *file)
 {
     memset(parser, 0, sizeof(struct parser));
     char *buffer = read_file(file);
     if (buffer) {
+        parser->mode_map = mode_map;
         tokenizer_init(&parser->tokenizer, buffer);
         parser_advance(parser);
         return true;
