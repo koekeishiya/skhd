@@ -44,6 +44,7 @@ struct cached_finger_data
 {
     int id;
     struct mt_point pos;
+    float pressure;
 };
 
 struct multitouch

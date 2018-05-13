@@ -127,7 +127,8 @@ internal MULTITOUCH_CALLBACK(touch_handler)
             .pos = {
                 .x = finger->normalized.pos.x,
                 .y = finger->normalized.pos.y
-            }
+            },
+            .pressure = finger->size
         };
 
         if (!cached_finger_data[finger->identifier]) {

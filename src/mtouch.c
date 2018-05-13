@@ -5,11 +5,15 @@ struct cached_finger_data *cached_finger_data[256];
 void process_cached_finger_data(int identifier)
 {
     printf("-- begin processing finger (%d) --\n", identifier);
-    for (int j = 0; j < buf_len(cached_finger_data[identifier]); ++j) {
-        struct cached_finger_data cached_data = cached_finger_data[identifier][j];
-        printf("finger %d, pos %.5f, %.5f\n", cached_data.id, cached_data.pos.x, cached_data.pos.y);
+    int frame_count = buf_len(cached_finger_data[identifier]);
+    for (int i = 0; i < frame_count; ++i) {
+        struct cached_finger_data cached_data = cached_finger_data[identifier][i];
+        printf("finger: %d, pos: (%.5f, %.5f), pressure: %.5f\n",
+                cached_data.id,
+                cached_data.pos.x, cached_data.pos.y,
+                cached_data.pressure);
     }
-    printf("-- end processing --\n");
+    printf("-- end processing (%d frames) --\n", frame_count);
 }
 
 void multitouch_begin(struct multitouch *multitouch, multitouch_callback *callback)
