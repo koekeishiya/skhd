@@ -11,6 +11,7 @@ feature comparison between **skhd** and **khd**
 | hotload config file        | [x]  | [ ] |
 | hotkey passthrough         | [x]  | [x] |
 | modal hotkey-system        | [x]  | [x] |
+| use media-keys as hotkey   | [x]  | [ ] |
 | application specific hotkey| [ ]  | [x] |
 | modifier only hotkey       | [ ]  | [x] |
 | caps-lock as hotkey        | [ ]  | [x] |
