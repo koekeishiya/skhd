@@ -99,73 +99,17 @@ internal EVENT_TAP_CALLBACK(key_handler)
     case kCGEventKeyDown: {
         if (!current_mode) return event;
 
-        BEGIN_TIMED_BLOCK();
         struct hotkey eventkey = create_eventkey(event);
         bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
-        END_TIMED_BLOCK();
-
         if (result) return NULL;
     } break;
     case NX_SYSDEFINED: {
-        CFDataRef event_data = CGEventCreateData(kCFAllocatorDefault, event);
-        uint8_t *data = CFDataGetBytePtr(event_data);
+        if (!current_mode) return event;
 
-#if 0
-        // NOTE(koekeishiya): dump raw event-data for reverse engineering
-        CFIndex length = CFDataGetLength(event_data);
-        for (int i = 0; i < length; ++i) {
-            if (i % 16 == 0) printf("\n");
-            printf("%02X ", data[i]);
-        }
-#endif
-
-        uint8_t event_subtype = data[123];
-        if (event_subtype == 0x08) {
-            uint8_t key_code = data[129];
-            uint8_t key_state = data[130];
-            if (key_state == NX_KEYDOWN) {
-                switch (key_code) {
-                case NX_KEYTYPE_SOUND_UP: {
-                    printf("pressed media_sound_up\n");
-                } break;
-                case NX_KEYTYPE_SOUND_DOWN: {
-                    printf("pressed media_sound_down\n");
-                } break;
-                case NX_KEYTYPE_MUTE: {
-                    printf("pressed media_mute\n");
-                } break;
-                case NX_KEYTYPE_PLAY: {
-                    printf("pressed media_play\n");
-                } break;
-                case NX_KEYTYPE_PREVIOUS: {
-                    printf("pressed media_prev\n");
-                } break;
-                case NX_KEYTYPE_NEXT: {
-                    printf("pressed media_next\n");
-                } break;
-                case NX_KEYTYPE_REWIND: {
-                    printf("pressed media_rewind\n");
-                } break;
-                case NX_KEYTYPE_FAST: {
-                    printf("pressed media_fast\n");
-                } break;
-                case NX_KEYTYPE_BRIGHTNESS_UP: {
-                    printf("pressed media_brightness_up\n");
-                } break;
-                case NX_KEYTYPE_BRIGHTNESS_DOWN: {
-                    printf("pressed media_brightness_down\n");
-                } break;
-                case NX_KEYTYPE_ILLUMINATION_UP: {
-                    printf("pressed media_brightness_up\n");
-                } break;
-                case NX_KEYTYPE_ILLUMINATION_DOWN: {
-                    printf("pressed media_brightness_down\n");
-                } break;
-                default: {
-                    printf("pressed system-key %d\n", key_code);
-                } break;
-                }
-            }
+        struct systemkey systemkey = create_systemkey(event);
+        if (systemkey.intercept) {
+            bool result = find_and_exec_hotkey(&systemkey.eventkey, &mode_map, &current_mode);
+            if (result) return NULL;
         }
     } break;
     }
@@ -263,7 +207,7 @@ int main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN);
 
     struct event_tap event_tap;
-    event_tap.mask = (1 << kCGEventKeyDown) | CGEventMaskBit(NX_SYSDEFINED);
+    event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
     event_tap_begin(&event_tap, key_handler);
 
     struct hotloader hotloader = {};

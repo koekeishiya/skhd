@@ -39,6 +39,7 @@ enum hotkey_flag
     Hotkey_Flag_Fn          = (1 << 12),
     Hotkey_Flag_Passthrough = (1 << 13),
     Hotkey_Flag_Activate    = (1 << 14),
+    Hotkey_Flag_NX          = (1 << 15),
     Hotkey_Flag_Hyper       = (Hotkey_Flag_Cmd |
                                Hotkey_Flag_Alt |
                                Hotkey_Flag_Shift |
@@ -63,6 +64,12 @@ struct hotkey
     uint32_t key;
     char *command;
     struct mode **mode_list;
+};
+
+struct systemkey
+{
+    struct hotkey eventkey;
+    bool intercept;
 };
 
 static inline void
@@ -91,6 +98,8 @@ bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
 
 struct hotkey create_eventkey(CGEventRef event);
+struct systemkey create_systemkey(CGEventRef event);
+
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
 void free_mode_map(struct table *mode_map);
 

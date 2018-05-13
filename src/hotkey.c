@@ -45,6 +45,12 @@ compare_fn(struct hotkey *a, struct hotkey *b)
     return has_flags(a, Hotkey_Flag_Fn) == has_flags(b, Hotkey_Flag_Fn);
 }
 
+internal bool
+compare_nx(struct hotkey *a, struct hotkey *b)
+{
+    return has_flags(a, Hotkey_Flag_NX) == has_flags(b, Hotkey_Flag_NX);
+}
+
 bool same_hotkey(struct hotkey *a, struct hotkey *b)
 {
     return compare_lr_mod(a, b, LRMOD_ALT)   &&
@@ -52,6 +58,7 @@ bool same_hotkey(struct hotkey *a, struct hotkey *b)
            compare_lr_mod(a, b, LRMOD_CTRL)  &&
            compare_lr_mod(a, b, LRMOD_SHIFT) &&
            compare_fn(a, b) &&
+           compare_nx(a, b) &&
            a->key == b->key;
 }
 
@@ -200,12 +207,30 @@ cgevent_flags_to_hotkey_flags(uint32_t eventflags)
     return flags;
 }
 
-struct hotkey
-create_eventkey(CGEventRef event)
+struct hotkey create_eventkey(CGEventRef event)
 {
     struct hotkey eventkey = {
         .key = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode),
         .flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event))
     };
     return eventkey;
+}
+
+struct systemkey create_systemkey(CGEventRef event)
+{
+    CFDataRef event_data = CGEventCreateData(kCFAllocatorDefault, event);
+    const uint8_t *data = CFDataGetBytePtr(event_data);
+    uint8_t event_subtype = data[123];
+    uint8_t key_code = data[129];
+    uint8_t key_state = data[130];
+    CFRelease(event_data);
+
+    struct systemkey systemkey = {
+        .eventkey = {
+            .key = key_code,
+            .flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX
+        },
+        .intercept = key_state == NX_KEYDOWN && event_subtype == NX_SUBTYPE_AUX_CONTROL_BUTTONS
+    };
+    return systemkey;
 }

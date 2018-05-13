@@ -104,7 +104,8 @@ parse_key(struct parser *parser)
     return keycode;
 }
 
-#define KEY_HAS_IMPLICIT_FN_MOD 4
+#define KEY_HAS_IMPLICIT_FN_MOD  4
+#define KEY_HAS_IMPLICIT_NX_MOD  35
 internal uint32_t literal_keycode_value[] =
 {
     kVK_Return,     kVK_Tab,           kVK_Space,
@@ -119,7 +120,23 @@ internal uint32_t literal_keycode_value[] =
     kVK_F13,        kVK_F14,           kVK_F15,
     kVK_F16,        kVK_F17,           kVK_F18,
     kVK_F19,        kVK_F20,
+
+    NX_KEYTYPE_SOUND_UP,        NX_KEYTYPE_SOUND_DOWN,      NX_KEYTYPE_MUTE,
+    NX_KEYTYPE_PLAY,            NX_KEYTYPE_PREVIOUS,        NX_KEYTYPE_NEXT,
+    NX_KEYTYPE_REWIND,          NX_KEYTYPE_FAST,            NX_KEYTYPE_BRIGHTNESS_UP,
+    NX_KEYTYPE_BRIGHTNESS_DOWN, NX_KEYTYPE_ILLUMINATION_UP, NX_KEYTYPE_ILLUMINATION_DOWN
 };
+
+internal inline void
+handle_implicit_literal_flags(struct hotkey *hotkey, int literal_index)
+{
+    if ((literal_index > KEY_HAS_IMPLICIT_FN_MOD) &&
+        (literal_index < KEY_HAS_IMPLICIT_NX_MOD)) {
+        hotkey->flags |= Hotkey_Flag_Fn;
+    } else if (literal_index >= KEY_HAS_IMPLICIT_NX_MOD) {
+        hotkey->flags |= Hotkey_Flag_NX;
+    }
+}
 
 internal void
 parse_key_literal(struct parser *parser, struct hotkey *hotkey)
@@ -127,7 +144,7 @@ parse_key_literal(struct parser *parser, struct hotkey *hotkey)
     struct token key = parser_previous(parser);
     for (int i = 0; i < array_count(literal_keycode_str); ++i) {
         if (token_equals(key, literal_keycode_str[i])) {
-            if (i > KEY_HAS_IMPLICIT_FN_MOD) hotkey->flags |= Hotkey_Flag_Fn;
+            handle_implicit_literal_flags(hotkey, i);
             hotkey->key = literal_keycode_value[i];
             printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
             break;

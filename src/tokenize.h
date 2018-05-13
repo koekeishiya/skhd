@@ -24,6 +24,11 @@ static const char *literal_keycode_str[] =
     "f13",        "f14",        "f15",
     "f16",        "f17",        "f18",
     "f19",        "f20",
+
+    "sound_up",        "sound_down",      "mute",
+    "play",            "previous",        "next",
+    "rewind",          "fast",            "brightness_up",
+    "brightness_down", "illumination_up", "illumination_down"
 };
 
 enum token_type
