@@ -236,16 +236,15 @@ int main(int argc, char **argv)
     parse_config_helper(config_file);
     signal(SIGCHLD, SIG_IGN);
 
-    struct event_tap event_tap;
-    event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
+    struct event_tap event_tap = { .mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED) };
     event_tap_begin(&event_tap, key_handler);
+
+    struct multitouch multitouch;
+    multitouch_begin(&multitouch, touch_handler);
 
     struct hotloader hotloader = {};
     hotloader_add_file(&hotloader, config_file);
     hotloader_begin(&hotloader, config_handler);
-
-    struct multitouch multitouch;
-    multitouch_begin(&multitouch, touch_handler);
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
