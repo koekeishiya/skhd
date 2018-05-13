@@ -63,10 +63,16 @@ eat_hex(struct tokenizer *tokenizer)
     }
 }
 
+internal inline bool
+isidentifier(char c)
+{
+    return isalpha(c) || c == '_';
+}
+
 internal void
 eat_identifier(struct tokenizer *tokenizer)
 {
-    while ((*tokenizer->at) && isalpha(*tokenizer->at)) {
+    while ((*tokenizer->at) && isidentifier(*tokenizer->at)) {
         advance(tokenizer);
     }
 
