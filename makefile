@@ -1,4 +1,4 @@
-FRAMEWORKS     = -framework Carbon
+FRAMEWORKS     = -framework Carbon -F/System/Library/PrivateFrameworks -framework MultitouchSupport
 BUILD_PATH     = ./bin
 BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c

@@ -17,6 +17,7 @@
 #include "tokenize.h"
 #include "parse.h"
 #include "hotkey.h"
+#include "mtouch.h"
 
 #include "hotload.c"
 #include "event_tap.c"
@@ -24,6 +25,7 @@
 #include "tokenize.c"
 #include "parse.c"
 #include "hotkey.c"
+#include "mtouch.c"
 
 #define internal static
 extern bool CGSIsSecureEventInputSet();
@@ -114,6 +116,33 @@ internal EVENT_TAP_CALLBACK(key_handler)
     } break;
     }
     return event;
+}
+
+internal MULTITOUCH_CALLBACK(touch_handler)
+{
+    for (int i = 0; i < num_fingers; ++i) {
+        struct finger *finger = &data[i];
+        struct cached_finger_data cached_data = {
+            .id = finger->identifier,
+            .pos = {
+                .x = finger->normalized.pos.x,
+                .y = finger->normalized.pos.y
+            }
+        };
+
+        if (!cached_finger_data[finger->identifier]) {
+            printf("finger %d pressed\n", finger->identifier);
+        }
+        buf_push(cached_finger_data[finger->identifier], cached_data);
+
+        if (finger->size == 0.0f) {
+            printf("finger %d released\n", finger->identifier);
+            process_cached_finger_data(finger->identifier);
+            buf_free(cached_finger_data[finger->identifier]);
+            cached_finger_data[finger->identifier] = NULL;
+        }
+    }
+    return 0;
 }
 
 internal bool
@@ -213,6 +242,9 @@ int main(int argc, char **argv)
     struct hotloader hotloader = {};
     hotloader_add_file(&hotloader, config_file);
     hotloader_begin(&hotloader, config_handler);
+
+    struct multitouch multitouch;
+    multitouch_begin(&multitouch, touch_handler);
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
