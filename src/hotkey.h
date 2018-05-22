@@ -66,12 +66,6 @@ struct hotkey
     struct mode **mode_list;
 };
 
-struct systemkey
-{
-    struct hotkey eventkey;
-    bool intercept;
-};
-
 static inline void
 add_flags(struct hotkey *hotkey, uint32_t flag)
 {
@@ -98,7 +92,7 @@ bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
 
 struct hotkey create_eventkey(CGEventRef event);
-struct systemkey create_systemkey(CGEventRef event);
+bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
 void free_mode_map(struct table *mode_map);

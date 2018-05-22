@@ -106,9 +106,9 @@ internal EVENT_TAP_CALLBACK(key_handler)
     case NX_SYSDEFINED: {
         if (!current_mode) return event;
 
-        struct systemkey systemkey = create_systemkey(event);
-        if (systemkey.intercept) {
-            bool result = find_and_exec_hotkey(&systemkey.eventkey, &mode_map, &current_mode);
+        struct hotkey eventkey;
+        if (intercept_systemkey(event, &eventkey)) {
+            bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
             if (result) return NULL;
         }
     } break;

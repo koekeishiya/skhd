@@ -216,21 +216,22 @@ struct hotkey create_eventkey(CGEventRef event)
     return eventkey;
 }
 
-struct systemkey create_systemkey(CGEventRef event)
+bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey)
 {
     CFDataRef event_data = CGEventCreateData(kCFAllocatorDefault, event);
-    const uint8_t *data = CFDataGetBytePtr(event_data);
-    uint8_t event_subtype = data[123];
-    uint8_t key_code = data[129];
+    const uint8_t *data  = CFDataGetBytePtr(event_data);
+    uint8_t key_code  = data[129];
     uint8_t key_state = data[130];
+    uint8_t key_stype = data[123];
     CFRelease(event_data);
 
-    struct systemkey systemkey = {
-        .eventkey = {
-            .key = key_code,
-            .flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX
-        },
-        .intercept = key_state == NX_KEYDOWN && event_subtype == NX_SUBTYPE_AUX_CONTROL_BUTTONS
-    };
-    return systemkey;
+    bool result = ((key_state == NX_KEYDOWN) &&
+                   (key_stype == NX_SUBTYPE_AUX_CONTROL_BUTTONS));
+
+    if (result) {
+        eventkey->key = key_code;
+        eventkey->flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX;
+    }
+
+    return result;
 }
