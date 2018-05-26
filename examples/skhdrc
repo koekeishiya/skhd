@@ -112,6 +112,7 @@ shift + alt - left   : chunkc tiling::window --grid-layout 1:2:0:0:1:1
 shift + alt - right  : chunkc tiling::window --grid-layout 1:2:1:0:1:1
 
 # fast focus desktop
+cmd + alt - x : chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
 cmd + alt - z : chunkc tiling::desktop --focus prev
 cmd + alt - c : chunkc tiling::desktop --focus next
 cmd + alt - 1 : chunkc tiling::desktop --focus 1
