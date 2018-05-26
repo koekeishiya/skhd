@@ -111,6 +111,17 @@ shift + alt - left   : chunkc tiling::window --grid-layout 1:2:0:0:1:1
 # make floating window fill right-half of screen
 shift + alt - right  : chunkc tiling::window --grid-layout 1:2:1:0:1:1
 
+# fast focus desktop
+cmd + alt - z : chunkc tiling::desktop --focus prev
+cmd + alt - c : chunkc tiling::desktop --focus next
+cmd + alt - 1 : chunkc tiling::desktop --focus 1
+cmd + alt - 2 : chunkc tiling::desktop --focus 2
+cmd + alt - 3 : chunkc tiling::desktop --focus 3
+cmd + alt - 4 : chunkc tiling::desktop --focus 4
+cmd + alt - 5 : chunkc tiling::desktop --focus 5
+cmd + alt - 6 : chunkc tiling::desktop --focus 6
+cmd + alt - 7 : chunkc tiling::desktop --focus 7
+
 # send window to desktop
 shift + alt - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop)
 shift + alt - z : chunkc tiling::window --send-to-desktop prev
@@ -121,17 +132,19 @@ shift + alt - 3 : chunkc tiling::window --send-to-desktop 3
 shift + alt - 4 : chunkc tiling::window --send-to-desktop 4
 shift + alt - 5 : chunkc tiling::window --send-to-desktop 5
 shift + alt - 6 : chunkc tiling::window --send-to-desktop 6
+shift + alt - 7 : chunkc tiling::window --send-to-desktop 7
 
 # send window to desktop and follow focus
-shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); qes -k "cmd + alt - $(chunkc get _last_active_desktop)"
-shift + cmd - z : chunkc tiling::window --send-to-desktop prev; qes -k "cmd + alt - z"
-shift + cmd - c : chunkc tiling::window --send-to-desktop next; qes -k "cmd + alt - c"
-shift + cmd - 1 : chunkc tiling::window --send-to-desktop 1; qes -k "cmd + alt - 1"
-shift + cmd - 2 : chunkc tiling::window --send-to-desktop 2; qes -k "cmd + alt - 2"
-shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; qes -k "cmd + alt - 3"
-shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; qes -k "cmd + alt - 4"
-shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; qes -k "cmd + alt - 5"
-shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; qes -k "cmd + alt - 6"
+shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
+shift + cmd - z : chunkc tiling::window --send-to-desktop prev; chunkc tiling::desktop --focus prev
+shift + cmd - c : chunkc tiling::window --send-to-desktop next; chunkc tiling::desktop --focus next
+shift + cmd - 1 : chunkc tiling::window --send-to-desktop 1; chunkc tiling::desktop --focus 1
+shift + cmd - 2 : chunkc tiling::window --send-to-desktop 2; chunkc tiling::desktop --focus 2
+shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; chunkc tiling::desktop --focus 3
+shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; chunkc tiling::desktop --focus 4
+shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; chunkc tiling::desktop --focus 5
+shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; chunkc tiling::desktop --focus 6
+shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
 
 # focus monitor
 ctrl + alt - z  : chunkc tiling::monitor -f prev
@@ -210,7 +223,3 @@ ctrl + alt - s : chunkc tiling::desktop --layout monocle
 ctrl + alt - d : chunkc tiling::desktop --layout float
 
 ctrl + alt - w : chunkc tiling::desktop --deserialize ~/.chunkwm_layouts/dev_1
-
-cmd - 7 : qes -k "shift + alt - 7"
-cmd - 8 : qes -k "shift + alt - 8"
-cmd - 9 : qes -k "shift + alt - 9"
