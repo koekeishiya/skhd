@@ -102,6 +102,7 @@ fork_and_exec(char *command)
 
     int cpid = fork();
     if (cpid == 0) {
+        setsid();
         char *exec[] = { shell, arg, command, NULL};
         int status_code = execvp(exec[0], exec);
         exit(status_code);

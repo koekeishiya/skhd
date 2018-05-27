@@ -70,7 +70,7 @@
 # default, test < cmd - return : open -na /Applications/Terminal.app
 
 # open terminal, blazingly fast compared to iTerm/Hyper
-cmd - return : open -na /Applications/Kitty.app
+cmd - return : /Applications/Kitty.app/Contents/MacOS/kitty --single-instance
 
 # open qutebrowser
 cmd + shift - return : ~/Scripts/qtb.sh
@@ -121,7 +121,7 @@ cmd + alt - 3 : chunkc tiling::desktop --focus 3
 cmd + alt - 4 : chunkc tiling::desktop --focus 4
 cmd + alt - 5 : chunkc tiling::desktop --focus 5
 cmd + alt - 6 : chunkc tiling::desktop --focus 6
-cmd + alt - 7 : chunkc tiling::desktop --focus 7
+# cmd + alt - 7 : chunkc tiling::desktop --focus 7
 
 # send window to desktop
 shift + alt - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop)
@@ -133,7 +133,7 @@ shift + alt - 3 : chunkc tiling::window --send-to-desktop 3
 shift + alt - 4 : chunkc tiling::window --send-to-desktop 4
 shift + alt - 5 : chunkc tiling::window --send-to-desktop 5
 shift + alt - 6 : chunkc tiling::window --send-to-desktop 6
-shift + alt - 7 : chunkc tiling::window --send-to-desktop 7
+# shift + alt - 7 : chunkc tiling::window --send-to-desktop 7
 
 # send window to desktop and follow focus
 shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
@@ -145,7 +145,7 @@ shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; chunkc tiling::desk
 shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; chunkc tiling::desktop --focus 4
 shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; chunkc tiling::desktop --focus 5
 shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; chunkc tiling::desktop --focus 6
-shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
+# shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
 
 # focus monitor
 ctrl + alt - z  : chunkc tiling::monitor -f prev
