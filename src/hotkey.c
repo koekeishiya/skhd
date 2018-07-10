@@ -3,12 +3,19 @@
 #define internal static
 #define local_persist static
 
+#define HOTKEY_FOUND           ((1) << 0)
+#define MODE_CAPTURE(a)        ((a) << 1)
+#define HOTKEY_PASSTHROUGH(a)  ((a) << 2)
+
 #define LRMOD_ALT   0
 #define LRMOD_CMD   6
 #define LRMOD_CTRL  9
 #define LRMOD_SHIFT 3
 #define LMOD_OFFS   1
 #define RMOD_OFFS   2
+
+internal char arg[] = "-c";
+internal char *shell = NULL;
 
 internal uint32_t cgevent_lrmod_flag[] =
 {
@@ -90,16 +97,9 @@ unsigned long hash_mode(char *key)
     return hash;
 }
 
-internal void
+internal inline void
 fork_and_exec(char *command)
 {
-    local_persist char arg[] = "-c";
-    local_persist char *shell = NULL;
-    if (!shell) {
-        char *env_shell = getenv("SHELL");
-        shell = env_shell ? env_shell : "/bin/bash";
-    }
-
     int cpid = fork();
     if (cpid == 0) {
         setsid();
@@ -109,22 +109,44 @@ fork_and_exec(char *command)
     }
 }
 
-internal inline bool
-passthrough(struct hotkey *hotkey)
+internal inline void
+passthrough(struct hotkey *hotkey, uint32_t *capture)
 {
-    return !has_flags(hotkey, Hotkey_Flag_Passthrough);
+    *capture |= HOTKEY_PASSTHROUGH((int)has_flags(hotkey, Hotkey_Flag_Passthrough));
 }
 
 internal inline struct hotkey *
-find_hotkey(struct mode *mode, struct hotkey *hotkey)
+find_hotkey(struct mode *mode, struct hotkey *hotkey, uint32_t *capture)
 {
-    return table_find(&mode->hotkey_map, hotkey);
+    struct hotkey *result = table_find(&mode->hotkey_map, hotkey);
+    if (result) *capture |= HOTKEY_FOUND;
+    return result;
+}
+
+internal inline bool
+should_capture_hotkey(uint32_t capture)
+{
+    if ((capture & HOTKEY_FOUND)) {
+        if (!(capture & MODE_CAPTURE(1)) &&
+            !(capture & HOTKEY_PASSTHROUGH(1))) {
+            return true;
+        }
+
+        if (!(capture & HOTKEY_PASSTHROUGH(1)) &&
+             (capture & MODE_CAPTURE(1))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    return (capture & MODE_CAPTURE(1));
 }
 
 bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m)
 {
-    bool c = (*m)->capture;
-    for (struct hotkey *h = find_hotkey(*m, k); h; c |= passthrough(h), h = 0) {
+    uint32_t c = MODE_CAPTURE((int)(*m)->capture);
+    for (struct hotkey *h = find_hotkey(*m, k, &c); h; passthrough(h, &c), h = 0) {
         char *cmd = h->command;
         if (has_flags(h, Hotkey_Flag_Activate)) {
             *m = table_find(t, cmd);
@@ -132,7 +154,7 @@ bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m)
         }
         if (cmd) fork_and_exec(cmd);
     }
-    return c;
+    return should_capture_hotkey(c);
 }
 
 void free_mode_map(struct table *mode_map)
@@ -235,4 +257,12 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey)
     }
 
     return result;
+}
+
+void init_shell()
+{
+    if (!shell) {
+        char *env_shell = getenv("SHELL");
+        shell = env_shell ? env_shell : "/bin/bash";
+    }
 }

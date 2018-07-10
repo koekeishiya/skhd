@@ -29,7 +29,7 @@
 extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
-#if 0
+#if 1
 #define BEGIN_TIMED_BLOCK() \
     clock_t timed_block_begin = clock()
 #define END_TIMED_BLOCK() \
@@ -99,8 +99,11 @@ internal EVENT_TAP_CALLBACK(key_handler)
     case kCGEventKeyDown: {
         if (!current_mode) return event;
 
+        BEGIN_TIMED_BLOCK();
         struct hotkey eventkey = create_eventkey(event);
         bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
+        END_TIMED_BLOCK();
+
         if (result) return NULL;
     } break;
     case NX_SYSDEFINED: {
@@ -205,6 +208,7 @@ int main(int argc, char **argv)
     table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
     parse_config_helper(config_file);
     signal(SIGCHLD, SIG_IGN);
+    init_shell();
 
     struct event_tap event_tap;
     event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);

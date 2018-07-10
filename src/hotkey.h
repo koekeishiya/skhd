@@ -97,4 +97,6 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
 void free_mode_map(struct table *mode_map);
 
+void init_shell();
+
 #endif
