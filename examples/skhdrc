@@ -75,6 +75,9 @@ cmd - return : /Applications/Kitty.app/Contents/MacOS/kitty --single-instance -d
 # open qutebrowser
 cmd + shift - return : ~/Scripts/qtb.sh
 
+# open mpv
+cmd - m : open -na /Applications/mpv.app $(pbpaste)
+
 # close focused window
 alt - w : chunkc tiling::window --close
 
@@ -110,6 +113,19 @@ shift + alt - left   : chunkc tiling::window --grid-layout 1:2:0:0:1:1
 
 # make floating window fill right-half of screen
 shift + alt - right  : chunkc tiling::window --grid-layout 1:2:1:0:1:1
+
+# create desktop, move window and follow focus
+shift + cmd - n : chunkc tiling::desktop --create;\
+                  id=$(chunkc tiling::query --desktops-for-monitor $(chunkc tiling::query --monitor-for-desktop $(chunkc tiling::query --desktop id)));\
+                  chunkc tiling::window --send-to-desktop $(echo ${id##* });\
+                  chunkc tiling::desktop --focus $(echo ${id##* })
+
+# create desktop and follow focus
+cmd + alt - n : chunkc tiling::desktop --create;\
+                id=$(chunkc tiling::query --desktops-for-monitor $(chunkc tiling::query --monitor-for-desktop $(chunkc tiling::query --desktop id)));\
+                chunkc tiling::desktop --focus $(echo ${id##* })
+# destroy desktop
+cmd + alt - w : chunkc tiling::desktop --annihilate
 
 # fast focus desktop
 cmd + alt - x : chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
@@ -211,8 +227,11 @@ alt - q : chunkc tiling::window --toggle fade
 alt - t : chunkc tiling::window --toggle float;\
           chunkc tiling::window --grid-layout 4:4:1:1:2:2
 
+# toggle sticky
+alt - s : chunkc tiling::window --toggle sticky
+
 # toggle sticky, float and resize to picture-in-picture size
-alt - s : chunkc tiling::window --toggle sticky;\
+alt - p : chunkc tiling::window --toggle sticky;\
           chunkc tiling::window --grid-layout 5:5:4:0:1:1
 
 # float next window to be tiled
