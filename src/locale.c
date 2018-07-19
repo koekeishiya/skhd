@@ -9,7 +9,7 @@
 internal struct table keymap_table;
 
 internal char *
-copy_cf_string_to_c(CFStringRef string)
+copy_cfstring(CFStringRef string)
 {
     CFStringEncoding encoding = kCFStringEncodingUTF8;
     CFIndex length = CFStringGetLength(string);
@@ -104,7 +104,7 @@ bool initialize_keycode_map()
         CFStringRef key_string = cfstring_from_keycode(keyboard_layout, index);
         if (!key_string) continue;
 
-        char *c_key_string = copy_cf_string_to_c(key_string);
+        char *c_key_string = copy_cfstring(key_string);
         CFRelease(key_string);
         if (!c_key_string) continue;
 
