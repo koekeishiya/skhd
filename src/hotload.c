@@ -66,7 +66,7 @@ resolve_symlink(char *file)
     return NULL;
 }
 
-internal struct watched_file *
+internal inline struct watched_file *
 hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
 {
     struct watched_file *result = NULL;
@@ -88,8 +88,7 @@ internal FSEVENT_CALLBACK(hotloader_handler)
 
     struct watched_file *watch_info;
     for (unsigned index = 0; index < count; ++index) {
-        char *absolutepath = files[index];
-        if ((watch_info = hotloader_watched_file(hotloader, absolutepath))) {
+        if ((watch_info = hotloader_watched_file(hotloader, files[index]))) {
             hotloader->callback(watch_info->absolutepath, watch_info->directory, watch_info->filename);
         }
     }
