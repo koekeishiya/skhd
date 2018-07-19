@@ -96,7 +96,8 @@ void hotloader_add_file(struct hotloader *hotloader, char *file)
                 .filename = file_name(real_path)
             };
             hotloader->watch_list[hotloader->watch_count++] = watch_info;
-            printf("hotload: watching file '%s' in directory '%s'\n", watch_info.filename, watch_info.directory);
+            printf("hotload: watching file '%s' in directory '%s'\n",
+                    watch_info.filename, watch_info.directory);
         } else {
             fprintf(stderr, "hotload: could not watch file '%s'\n", file);
         }
@@ -105,10 +106,7 @@ void hotloader_add_file(struct hotloader *hotloader, char *file)
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 {
-    if ((hotloader->enabled) ||
-        (!hotloader->watch_count)) {
-        return false;
-    }
+    if (hotloader->enabled || !hotloader->watch_count) return false;
 
     CFStringRef string_refs[hotloader->watch_count];
     for (unsigned index = 0; index < hotloader->watch_count; ++index) {
@@ -117,13 +115,18 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
                                                        kCFStringEncodingUTF8);
     }
 
-    FSEventStreamContext context = {};
-    context.info = (void *) hotloader;
+    FSEventStreamContext context = {
+        .info = hotloader
+    };
 
-    hotloader->enabled = true;
-    hotloader->callback = callback;
-    hotloader->path = (CFArrayRef) CFArrayCreate(NULL, (const void **) string_refs, hotloader->watch_count, &kCFTypeArrayCallBacks);
-    hotloader->flags = kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents;
+    hotloader->path = (CFArrayRef) CFArrayCreate(NULL,
+                                                 (const void **) string_refs,
+                                                 hotloader->watch_count,
+                                                 &kCFTypeArrayCallBacks);
+
+    hotloader->flags = kFSEventStreamCreateFlagNoDefer |
+                       kFSEventStreamCreateFlagFileEvents;
+
     hotloader->stream = FSEventStreamCreate(NULL,
                                             hotloader_handler,
                                             &context,
@@ -131,28 +134,35 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
                                             kFSEventStreamEventIdSinceNow,
                                             0.5,
                                             hotloader->flags);
-    FSEventStreamScheduleWithRunLoop(hotloader->stream, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
+
+    FSEventStreamScheduleWithRunLoop(hotloader->stream,
+                                     CFRunLoopGetMain(),
+                                     kCFRunLoopDefaultMode);
+
+    hotloader->callback = callback;
     FSEventStreamStart(hotloader->stream);
+    hotloader->enabled = true;
+
     return true;
 }
 
 void hotloader_end(struct hotloader *hotloader)
 {
-    if (hotloader->enabled) {
-        FSEventStreamStop(hotloader->stream);
-        FSEventStreamInvalidate(hotloader->stream);
-        FSEventStreamRelease(hotloader->stream);
+    if (!hotloader->enabled) return;
 
-        CFIndex count = CFArrayGetCount(hotloader->path);
-        for (unsigned index = 0; index < count; ++index) {
-            CFStringRef string_ref = (CFStringRef) CFArrayGetValueAtIndex(hotloader->path, index);
-            free(hotloader->watch_list[index].absolutepath);
-            free(hotloader->watch_list[index].directory);
-            free(hotloader->watch_list[index].filename);
-            CFRelease(string_ref);
-        }
+    FSEventStreamStop(hotloader->stream);
+    FSEventStreamInvalidate(hotloader->stream);
+    FSEventStreamRelease(hotloader->stream);
 
-        CFRelease(hotloader->path);
-        memset(hotloader, 0, sizeof(struct hotloader));
+    CFIndex count = CFArrayGetCount(hotloader->path);
+    for (unsigned index = 0; index < count; ++index) {
+        CFTypeRef string_ref = CFArrayGetValueAtIndex(hotloader->path, index);
+        free(hotloader->watch_list[index].absolutepath);
+        free(hotloader->watch_list[index].directory);
+        free(hotloader->watch_list[index].filename);
+        CFRelease(string_ref);
     }
+
+    CFRelease(hotloader->path);
+    memset(hotloader, 0, sizeof(struct hotloader));
 }
