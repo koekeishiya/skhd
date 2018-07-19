@@ -66,30 +66,21 @@ resolve_symlink(char *file)
     return NULL;
 }
 
-internal inline struct watched_file *
-hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
-{
-    struct watched_file *result = NULL;
-    for (unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
-        struct watched_file *watch_info = hotloader->watch_list + index;
-        if (strcmp(watch_info->absolutepath, absolutepath) == 0) {
-            result = watch_info;
-        }
-    }
-
-    return result;
-}
-
 internal FSEVENT_CALLBACK(hotloader_handler)
 {
     /* NOTE(koekeishiya): We sometimes get two events upon file save. */
     struct hotloader *hotloader = (struct hotloader *) context;
     char **files = (char **) paths;
 
-    struct watched_file *watch_info;
-    for (unsigned index = 0; index < count; ++index) {
-        if ((watch_info = hotloader_watched_file(hotloader, files[index]))) {
-            hotloader->callback(watch_info->absolutepath, watch_info->directory, watch_info->filename);
+    for (unsigned file_index = 0; file_index < count; ++file_index) {
+        for (unsigned watch_index = 0; watch_index < hotloader->watch_count; ++watch_index) {
+            struct watched_file *watch_info = hotloader->watch_list + watch_index;
+            if (strcmp(watch_info->absolutepath, files[file_index]) == 0) {
+                hotloader->callback(watch_info->absolutepath,
+                                    watch_info->directory,
+                                    watch_info->filename);
+                break;
+            }
         }
     }
 }
