@@ -9,6 +9,7 @@ typedef HOTLOADER_CALLBACK(hotloader_callback);
 
 struct watched_file
 {
+    char *absolutepath;
     char *directory;
     char *filename;
 };

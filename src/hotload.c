@@ -50,7 +50,7 @@ resolve_symlink(char *file)
     }
 
     if (!S_ISLNK(buffer.st_mode)) {
-        return file;
+        return copy_string(file);
     }
 
     ssize_t size = buffer.st_size + 1;
@@ -72,18 +72,9 @@ hotloader_watched_file(struct hotloader *hotloader, char *absolutepath)
     struct watched_file *result = NULL;
     for (unsigned index = 0; result == NULL && index < hotloader->watch_count; ++index) {
         struct watched_file *watch_info = hotloader->watch_list + index;
-
-        char *directory = file_directory(absolutepath);
-        char *filename = file_name(absolutepath);
-
-        if (strcmp(watch_info->directory, directory) == 0) {
-            if (strcmp(watch_info->filename, filename) == 0) {
-                result = watch_info;
-            }
+        if (strcmp(watch_info->absolutepath, absolutepath) == 0) {
+            result = watch_info;
         }
-
-        free(filename);
-        free(directory);
     }
 
     return result;
@@ -99,7 +90,7 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     for (unsigned index = 0; index < count; ++index) {
         char *absolutepath = files[index];
         if ((watch_info = hotloader_watched_file(hotloader, absolutepath))) {
-            hotloader->callback(absolutepath, watch_info->directory, watch_info->filename);
+            hotloader->callback(watch_info->absolutepath, watch_info->directory, watch_info->filename);
         }
     }
 }
@@ -109,14 +100,11 @@ void hotloader_add_file(struct hotloader *hotloader, char *file)
     if (!hotloader->enabled) {
         char *real_path = resolve_symlink(file);
         if (real_path) {
-            struct watched_file watch_info;
-            watch_info.directory = file_directory(real_path);
-            watch_info.filename = file_name(real_path);
-
-            if (real_path != file) {
-                free(real_path);
-            }
-
+            struct watched_file watch_info = {
+                .absolutepath = real_path,
+                .directory = file_directory(real_path),
+                .filename = file_name(real_path)
+            };
             hotloader->watch_list[hotloader->watch_count++] = watch_info;
             printf("hotload: watching file '%s' in directory '%s'\n", watch_info.filename, watch_info.directory);
         } else {
@@ -168,6 +156,7 @@ void hotloader_end(struct hotloader *hotloader)
         CFIndex count = CFArrayGetCount(hotloader->path);
         for (unsigned index = 0; index < count; ++index) {
             CFStringRef string_ref = (CFStringRef) CFArrayGetValueAtIndex(hotloader->path, index);
+            free(hotloader->watch_list[index].absolutepath);
             free(hotloader->watch_list[index].directory);
             free(hotloader->watch_list[index].filename);
             CFRelease(string_ref);
