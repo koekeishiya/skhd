@@ -8,10 +8,17 @@
 
 #define FSEVENT_CALLBACK(name) void name(ConstFSEventStreamRef stream,\
                                          void *context,\
-                                         size_t count,\
-                                         void *paths,\
+                                         size_t file_count,\
+                                         void *file_paths,\
                                          const FSEventStreamEventFlags *flags,\
                                          const FSEventStreamEventId *ids)
+
+internal inline bool
+same_string(const char *a, const char *b)
+{
+    bool result = a && b && strcmp(a, b) == 0;
+    return result;
+}
 
 internal char *
 copy_string(const char *s)
@@ -42,14 +49,21 @@ file_name(const char *file)
 }
 
 internal char *
-resolve_symlink(char *file)
+resolve_symlink(char *file, enum watch_kind *kind)
 {
     struct stat buffer;
     if (lstat(file, &buffer) != 0) {
+        *kind = WATCH_KIND_INVALID;
         return NULL;
     }
 
+    if (S_ISDIR(buffer.st_mode)) {
+        *kind = WATCH_KIND_CATALOG;
+        return copy_string(file);
+    }
+
     if (!S_ISLNK(buffer.st_mode)) {
+        *kind = WATCH_KIND_FILE;
         return copy_string(file);
     }
 
@@ -59,49 +73,116 @@ resolve_symlink(char *file)
 
     if (read != -1) {
         result[read] = '\0';
+        *kind = WATCH_KIND_FILE;
         return result;
     }
 
     free(result);
+    *kind = WATCH_KIND_INVALID;
     return NULL;
+}
+
+internal char *
+same_catalog(char *absolutepath, struct watched_catalog *catalog_info)
+{
+    char *last_slash = strrchr(absolutepath, '/');
+    if (!last_slash) return NULL;
+
+    char *filename = NULL;
+
+    // NOTE(koekeisihya): null terminate '/' to cut off filename
+    *last_slash = '\0';
+
+    if (same_string(absolutepath, catalog_info->directory)) {
+        filename = !catalog_info->extension
+                 ? last_slash + 1
+                 : same_string(catalog_info->extension, strrchr(last_slash + 1, '.'))
+                 ? last_slash + 1
+                 : NULL
+    }
+
+    // NOTE(koekeisihya): revert '/' to restore filename
+    *last_slash = '/';
+
+    return filename;
+}
+
+internal inline bool
+same_file(char *absolutepath, struct watched_file *file_info)
+{
+    bool result = same_string(absolutepath, file_info->absolutepath);
+    return result;
 }
 
 internal FSEVENT_CALLBACK(hotloader_handler)
 {
     /* NOTE(koekeishiya): We sometimes get two events upon file save. */
     struct hotloader *hotloader = (struct hotloader *) context;
-    char **files = (char **) paths;
+    char **files = (char **) file_paths;
 
-    for (unsigned file_index = 0; file_index < count; ++file_index) {
+    for (unsigned file_index = 0; file_index < file_count; ++file_index) {
         for (unsigned watch_index = 0; watch_index < hotloader->watch_count; ++watch_index) {
-            struct watched_file *watch_info = hotloader->watch_list + watch_index;
-            if (strcmp(watch_info->absolutepath, files[file_index]) == 0) {
-                hotloader->callback(watch_info->absolutepath,
-                                    watch_info->directory,
-                                    watch_info->filename);
+            struct watched_entry *watch_info = hotloader->watch_list + watch_index;
+            if (watch_info->kind == WATCH_KIND_CATALOG) {
+                char *filename = same_catalog(files[file_index], &watch_info->catalog_info);
+                if (!filename) continue;
+
+                hotloader->callback(files[file_index],
+                                    watch_info->catalog_info->directory,
+                                    filename);
+                break;
+            } else if (watch_info->kind == WATCH_KIND_FILE) {
+                bool match = same_file(files[file_index], &watch_info->file_info);
+                if (!match) continue;
+
+                hotloader->callback(watch_info->file_info->absolutepath,
+                                    watch_info->file_info->directory,
+                                    watch_info->file_info->filename);
                 break;
             }
         }
     }
 }
 
-void hotloader_add_file(struct hotloader *hotloader, char *file)
+bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *extension)
 {
-    if (!hotloader->enabled) {
-        char *real_path = resolve_symlink(file);
-        if (real_path) {
-            struct watched_file watch_info = {
-                .absolutepath = real_path,
-                .directory = file_directory(real_path),
-                .filename = file_name(real_path)
-            };
-            hotloader->watch_list[hotloader->watch_count++] = watch_info;
-            printf("hotload: watching file '%s' in directory '%s'\n",
-                    watch_info.filename, watch_info.directory);
-        } else {
-            fprintf(stderr, "hotload: could not watch file '%s'\n", file);
+    if (hotloader->enabled) return false;
+
+    enum watch_kind kind;
+    char *real_path = resolve_symlink(directory, &kind);
+    if (kind != WATCH_KIND_CATALOG) return false;
+
+    hotloader->watch_list[hotloader->watch_count++] = {
+        .kind = WATCH_KIND_CATALOG,
+        .catalog_info = {
+            .directory = real_path,
+            .extension = extension
+                       ? copy_string(extension)
+                       : NULL
         }
-    }
+    };
+
+    return true;
+}
+
+bool hotloader_add_file(struct hotloader *hotloader, char *file)
+{
+    if (hotloader->enabled) return false;
+
+    enum watch_kind kind;
+    char *real_path = resolve_symlink(file, &kind);
+    if (kind != WATCH_KIND_FILE) return false;
+
+    hotloader->watch_list[hotloader->watch_count++] = {
+        .kind = WATCH_KIND_FILE,
+        .file_info = {
+            .absolutepath = real_path,
+            .directory = file_directory(real_path),
+            .filename = file_name(real_path)
+        }
+    };
+
+    return true;
 }
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
