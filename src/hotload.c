@@ -98,7 +98,7 @@ same_catalog(char *absolutepath, struct watched_catalog *catalog_info)
                  ? last_slash + 1
                  : same_string(catalog_info->extension, strrchr(last_slash + 1, '.'))
                  ? last_slash + 1
-                 : NULL
+                 : NULL;
     }
 
     // NOTE(koekeisihya): revert '/' to restore filename
@@ -128,16 +128,16 @@ internal FSEVENT_CALLBACK(hotloader_handler)
                 if (!filename) continue;
 
                 hotloader->callback(files[file_index],
-                                    watch_info->catalog_info->directory,
+                                    watch_info->catalog_info.directory,
                                     filename);
                 break;
             } else if (watch_info->kind == WATCH_KIND_FILE) {
                 bool match = same_file(files[file_index], &watch_info->file_info);
                 if (!match) continue;
 
-                hotloader->callback(watch_info->file_info->absolutepath,
-                                    watch_info->file_info->directory,
-                                    watch_info->file_info->filename);
+                hotloader->callback(watch_info->file_info.absolutepath,
+                                    watch_info->file_info.directory,
+                                    watch_info->file_info.filename);
                 break;
             }
         }
@@ -152,7 +152,7 @@ bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *e
     char *real_path = resolve_symlink(directory, &kind);
     if (kind != WATCH_KIND_CATALOG) return false;
 
-    hotloader->watch_list[hotloader->watch_count++] = {
+    struct watched_entry entry = {
         .kind = WATCH_KIND_CATALOG,
         .catalog_info = {
             .directory = real_path,
@@ -161,6 +161,7 @@ bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *e
                        : NULL
         }
     };
+    hotloader->watch_list[hotloader->watch_count++] = entry;
 
     return true;
 }
@@ -173,7 +174,7 @@ bool hotloader_add_file(struct hotloader *hotloader, char *file)
     char *real_path = resolve_symlink(file, &kind);
     if (kind != WATCH_KIND_FILE) return false;
 
-    hotloader->watch_list[hotloader->watch_count++] = {
+    struct watched_entry entry = {
         .kind = WATCH_KIND_FILE,
         .file_info = {
             .absolutepath = real_path,
@@ -181,6 +182,7 @@ bool hotloader_add_file(struct hotloader *hotloader, char *file)
             .filename = file_name(real_path)
         }
     };
+    hotloader->watch_list[hotloader->watch_count++] = entry;
 
     return true;
 }
@@ -191,8 +193,12 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 
     CFStringRef string_refs[hotloader->watch_count];
     for (unsigned index = 0; index < hotloader->watch_count; ++index) {
+        struct watched_entry *watch_info = hotloader->watch_list + watch_index;
+        char *directory = watch_info->kind == WATCH_KIND_FILE
+                        ? watch_info->file_info.directory
+                        : watch_info->catalog_info.directory;
         string_refs[index] = CFStringCreateWithCString(kCFAllocatorDefault,
-                                                       hotloader->watch_list[index].directory,
+                                                       directory,
                                                        kCFStringEncodingUTF8);
     }
 
@@ -237,11 +243,18 @@ void hotloader_end(struct hotloader *hotloader)
 
     CFIndex count = CFArrayGetCount(hotloader->path);
     for (unsigned index = 0; index < count; ++index) {
-        CFTypeRef string_ref = CFArrayGetValueAtIndex(hotloader->path, index);
-        free(hotloader->watch_list[index].absolutepath);
-        free(hotloader->watch_list[index].directory);
-        free(hotloader->watch_list[index].filename);
-        CFRelease(string_ref);
+        struct watched_entry *watch_info = hotloader->watch_list + index;
+        if (watch_info->kind == WATCH_KIND_FILE) {
+            free(watch_info->file_info.absolutepath);
+            free(watch_info->file_info.directory);
+            free(watch_info->file_info.filename);
+        } else if (watch_info->kind == WATCH_KIND_CATALOG) {
+            free(watch_info->catalog_info.directory);
+            if (watch_info->catalog_info.extension) {
+                free(watch_info->catalog_info.extension);
+            }
+        }
+        CFRelease(CFArrayGetValueAtIndex(hotloader->path, index));
     }
 
     CFRelease(hotloader->path);

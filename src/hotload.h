@@ -18,7 +18,7 @@ struct watched_catalog
 {
     char *directory;
     char *extension;
-}
+};
 
 struct watched_file
 {
@@ -50,7 +50,7 @@ struct hotloader
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback);
 void hotloader_end(struct hotloader *hotloader);
-void hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *extension);
-void hotloader_add_file(struct hotloader *hotloader, char *file);
+bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *extension);
+bool hotloader_add_file(struct hotloader *hotloader, char *file);
 
 #endif
