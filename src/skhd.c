@@ -215,8 +215,12 @@ int main(int argc, char **argv)
     event_tap_begin(&event_tap, key_handler);
 
     struct hotloader hotloader = {};
-    hotloader_add_file(&hotloader, config_file);
-    hotloader_begin(&hotloader, config_handler);
+    if (hotloader_add_file(&hotloader, config_file) &&
+        hotloader_begin(&hotloader, config_handler)) {
+        printf("skhd: watching '%s' for changes\n", config_file);
+    } else {
+        printf("skhd: could not watch '%s'\n", config_file);
+    }
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
