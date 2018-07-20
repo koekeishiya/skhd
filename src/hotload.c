@@ -31,7 +31,7 @@ copy_string(const char *s)
 }
 
 internal char *
-file_directory(const char *file)
+file_directory(char *file)
 {
     char *last_slash = strrchr(file, '/');
     *last_slash = '\0';
@@ -41,7 +41,7 @@ file_directory(const char *file)
 }
 
 internal char *
-file_name(const char *file)
+file_name(char *file)
 {
     char *last_slash = strrchr(file, '/');
     char *name = copy_string(last_slash + 1);
