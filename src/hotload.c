@@ -193,7 +193,7 @@ bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback)
 
     CFStringRef string_refs[hotloader->watch_count];
     for (unsigned index = 0; index < hotloader->watch_count; ++index) {
-        struct watched_entry *watch_info = hotloader->watch_list + watch_index;
+        struct watched_entry *watch_info = hotloader->watch_list + index;
         char *directory = watch_info->kind == WATCH_KIND_FILE
                         ? watch_info->file_info.directory
                         : watch_info->catalog_info.directory;
