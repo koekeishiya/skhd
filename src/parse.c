@@ -387,7 +387,6 @@ parse_keypress(struct parser *parser)
 
         if (found_modifier) {
             if (!parser_match(parser, Token_Dash)) {
-                parser_report_error(parser, Error_Unexpected_Token, "expected '-'");
                 goto err;
             }
         }
@@ -399,7 +398,6 @@ parse_keypress(struct parser *parser)
         } else if (parser_match(parser, Token_Literal)) {
             parse_key_literal(parser, hotkey);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected key-literal");
             goto err;
         }
 
@@ -408,9 +406,8 @@ parse_keypress(struct parser *parser)
     err:
         free(hotkey);
         return NULL;
-    } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected modifier or key-literal");
     }
+
     return NULL;
 }
 
