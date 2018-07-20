@@ -219,7 +219,7 @@ int main(int argc, char **argv)
         hotloader_begin(&hotloader, config_handler)) {
         printf("skhd: watching '%s' for changes\n", config_file);
     } else {
-        printf("skhd: could not watch '%s'\n", config_file);
+        fprintf(stderr, "skhd: could not watch '%s'\n", config_file);
     }
 
     CFRunLoopRun();
