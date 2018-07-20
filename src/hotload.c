@@ -49,7 +49,7 @@ file_name(const char *file)
 }
 
 internal char *
-resolve_symlink(char *file)
+resolve_symlink(const char *file)
 {
     struct stat buffer;
     if (lstat(file, &buffer) != 0) {
@@ -158,7 +158,7 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     }
 }
 
-bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *extension)
+bool hotloader_add_catalog(struct hotloader *hotloader, const char *directory, const char *extension)
 {
     if (hotloader->enabled) return false;
 
@@ -182,7 +182,7 @@ bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *e
     return true;
 }
 
-bool hotloader_add_file(struct hotloader *hotloader, char *file)
+bool hotloader_add_file(struct hotloader *hotloader, const char *file)
 {
     if (hotloader->enabled) return false;
 

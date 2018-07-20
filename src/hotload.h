@@ -50,7 +50,7 @@ struct hotloader
 
 bool hotloader_begin(struct hotloader *hotloader, hotloader_callback *callback);
 void hotloader_end(struct hotloader *hotloader);
-bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *extension);
-bool hotloader_add_file(struct hotloader *hotloader, char *file);
+bool hotloader_add_catalog(struct hotloader *hotloader, const char *directory, const char *extension);
+bool hotloader_add_file(struct hotloader *hotloader, const char *file);
 
 #endif
