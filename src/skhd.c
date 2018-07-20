@@ -17,6 +17,7 @@
 #include "tokenize.h"
 #include "parse.h"
 #include "hotkey.h"
+#include "synthesize.h"
 
 #include "hotload.c"
 #include "event_tap.c"
@@ -24,6 +25,7 @@
 #include "tokenize.c"
 #include "parse.c"
 #include "hotkey.c"
+#include "synthesize.c"
 
 #define internal static
 extern bool CGSIsSecureEventInputSet();
@@ -123,10 +125,12 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "vc:";
+    const char *short_option = "vc:k:t:";
     struct option long_option[] = {
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
+        { "key", required_argument, NULL, 'k' },
+        { "text", required_argument, NULL, 't' },
         { NULL, 0, NULL, 0 }
     };
 
@@ -137,7 +141,15 @@ parse_arguments(int argc, char **argv)
             return true;
         } break;
         case 'c': {
-            config_file = strdup(optarg);
+            config_file = copy_string(optarg);
+        } break;
+        case 'k': {
+            synthesize_key(optarg);
+            return true;
+        } break;
+        case 't': {
+            synthesize_text(optarg);
+            return true;
         } break;
         }
     }

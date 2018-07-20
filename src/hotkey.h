@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define Modifier_Keycode_Alt     0x3A
+#define Modifier_Keycode_Shift   0x38
+#define Modifier_Keycode_Cmd     0x37
+#define Modifier_Keycode_Ctrl    0x3B
+#define Modifier_Keycode_Fn      0x3F
+
 enum osx_event_mask
 {
     Event_Mask_Alt      = 0x00080000,

@@ -367,6 +367,53 @@ void parse_config(struct parser *parser)
     }
 }
 
+struct hotkey *
+parse_keypress(struct parser *parser)
+{
+    if ((parser_check(parser, Token_Modifier)) ||
+        (parser_check(parser, Token_Literal)) ||
+        (parser_check(parser, Token_Key_Hex)) ||
+        (parser_check(parser, Token_Key))) {
+        struct hotkey *hotkey = malloc(sizeof(struct hotkey));
+        memset(hotkey, 0, sizeof(struct hotkey));
+        bool found_modifier;
+
+        if ((found_modifier = parser_match(parser, Token_Modifier))) {
+            hotkey->flags = parse_modifier(parser);
+            if (parser->error) {
+                goto err;
+            }
+        }
+
+        if (found_modifier) {
+            if (!parser_match(parser, Token_Dash)) {
+                parser_report_error(parser, Error_Unexpected_Token, "expected '-'");
+                goto err;
+            }
+        }
+
+        if (parser_match(parser, Token_Key)) {
+            hotkey->key = parse_key(parser);
+        } else if (parser_match(parser, Token_Key_Hex)) {
+            hotkey->key = parse_key_hex(parser);
+        } else if (parser_match(parser, Token_Literal)) {
+            parse_key_literal(parser, hotkey);
+        } else {
+            parser_report_error(parser, Error_Unexpected_Token, "expected key-literal");
+            goto err;
+        }
+
+        return hotkey;
+
+    err:
+        free(hotkey);
+        return NULL;
+    } else {
+        parser_report_error(parser, Error_Unexpected_Token, "expected modifier or key-literal");
+    }
+    return NULL;
+}
+
 struct token
 parser_peek(struct parser *parser)
 {
@@ -443,6 +490,14 @@ bool parser_init(struct parser *parser, struct table *mode_map, char *file)
         return true;
     }
     return false;
+}
+
+bool parser_init_text(struct parser *parser, char *text)
+{
+    memset(parser, 0, sizeof(struct parser));
+    tokenizer_init(&parser->tokenizer, text);
+    parser_advance(parser);
+    return true;
 }
 
 void parser_destroy(struct parser *parser)
