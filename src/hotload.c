@@ -49,21 +49,18 @@ file_name(const char *file)
 }
 
 internal char *
-resolve_symlink(char *file, enum watch_kind *kind)
+resolve_symlink(char *file)
 {
     struct stat buffer;
     if (lstat(file, &buffer) != 0) {
-        *kind = WATCH_KIND_INVALID;
         return NULL;
     }
 
     if (S_ISDIR(buffer.st_mode)) {
-        *kind = WATCH_KIND_CATALOG;
         return copy_string(file);
     }
 
     if (!S_ISLNK(buffer.st_mode)) {
-        *kind = WATCH_KIND_FILE;
         return copy_string(file);
     }
 
@@ -73,13 +70,30 @@ resolve_symlink(char *file, enum watch_kind *kind)
 
     if (read != -1) {
         result[read] = '\0';
-        *kind = WATCH_KIND_FILE;
         return result;
     }
 
     free(result);
-    *kind = WATCH_KIND_INVALID;
     return NULL;
+}
+
+internal enum watch_kind
+resolve_watch_kind(char *file)
+{
+    struct stat buffer;
+    if (lstat(file, &buffer) != 0) {
+        return WATCH_KIND_INVALID;
+    }
+
+    if (S_ISDIR(buffer.st_mode)) {
+        return WATCH_KIND_CATALOG;
+    }
+
+    if (!S_ISLNK(buffer.st_mode)) {
+        return WATCH_KIND_FILE;
+    }
+
+    return WATCH_KIND_INVALID;
 }
 
 internal char *
@@ -148,8 +162,10 @@ bool hotloader_add_catalog(struct hotloader *hotloader, char *directory, char *e
 {
     if (hotloader->enabled) return false;
 
-    enum watch_kind kind;
-    char *real_path = resolve_symlink(directory, &kind);
+    char *real_path = resolve_symlink(directory);
+    if (!real_path) return false;
+
+    enum watch_kind kind = resolve_watch_kind(real_path);
     if (kind != WATCH_KIND_CATALOG) return false;
 
     struct watched_entry entry = {
@@ -170,8 +186,10 @@ bool hotloader_add_file(struct hotloader *hotloader, char *file)
 {
     if (hotloader->enabled) return false;
 
-    enum watch_kind kind;
-    char *real_path = resolve_symlink(file, &kind);
+    char *real_path = resolve_symlink(file);
+    if (!real_path) return false;
+
+    enum watch_kind kind = resolve_watch_kind(real_path);
     if (kind != WATCH_KIND_FILE) return false;
 
     struct watched_entry entry = {
