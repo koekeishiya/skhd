@@ -43,6 +43,7 @@ synthesize_modifiers(struct hotkey *hotkey, bool pressed)
 void synthesize_key(char *key_string)
 {
     if (!initialize_keycode_map()) return;
+
     struct parser parser;
     parser_init_text(&parser, key_string);
 
