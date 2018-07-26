@@ -56,7 +56,7 @@ Requires xcode-8 command-line tools.
     skhd -k "shift + alt - 7"
 
 -t | --text: Synthesize a line of text
-    skhd -t "ello, worldシ"
+    skhd -t "hello, worldシ"
 ```
 
 ### Configuration
