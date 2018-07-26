@@ -1,41 +1,16 @@
 #ifndef SKHD_HOTLOAD_H
 #define SKHD_HOTLOAD_H
 
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
+
 #include <Carbon/Carbon.h>
 
 #define HOTLOADER_CALLBACK(name) void name(char *absolutepath, char *directory, char *filename)
 typedef HOTLOADER_CALLBACK(hotloader_callback);
 
-enum watch_kind
-{
-    WATCH_KIND_INVALID,
-    WATCH_KIND_CATALOG,
-    WATCH_KIND_FILE
-};
-
-struct watched_catalog
-{
-    char *directory;
-    char *extension;
-};
-
-struct watched_file
-{
-    char *absolutepath;
-    char *directory;
-    char *filename;
-};
-
-struct watched_entry
-{
-    enum watch_kind kind;
-    union {
-        struct watched_file file_info;
-        struct watched_catalog catalog_info;
-    };
-};
-
+struct watched_entry;
 struct hotloader
 {
     FSEventStreamEventFlags flags;
@@ -44,7 +19,8 @@ struct hotloader
     bool enabled;
 
     hotloader_callback *callback;
-    struct watched_entry watch_list[32];
+    struct watched_entry *watch_list;
+    unsigned watch_capacity;
     unsigned watch_count;
 };
 

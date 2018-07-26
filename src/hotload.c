@@ -13,6 +13,35 @@
                                          const FSEventStreamEventFlags *flags,\
                                          const FSEventStreamEventId *ids)
 
+enum watch_kind
+{
+    WATCH_KIND_INVALID,
+    WATCH_KIND_CATALOG,
+    WATCH_KIND_FILE
+};
+
+struct watched_catalog
+{
+    char *directory;
+    char *extension;
+};
+
+struct watched_file
+{
+    char *absolutepath;
+    char *directory;
+    char *filename;
+};
+
+struct watched_entry
+{
+    enum watch_kind kind;
+    union {
+        struct watched_file file_info;
+        struct watched_catalog catalog_info;
+    };
+};
+
 internal inline bool
 same_string(const char *a, const char *b)
 {
@@ -24,7 +53,7 @@ internal char *
 copy_string(const char *s)
 {
     unsigned length = strlen(s);
-    char *result = malloc(length + 1);
+    char *result = (char *) malloc(length + 1);
     memcpy(result, s, length);
     result[length] = '\0';
     return result;
@@ -65,7 +94,7 @@ resolve_symlink(const char *file)
     }
 
     ssize_t size = buffer.st_size + 1;
-    char *result = malloc(size);
+    char *result = (char *) malloc(size);
     ssize_t read = readlink(file, result, size);
 
     if (read != -1) {
@@ -158,6 +187,22 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     }
 }
 
+internal inline void
+hotloader_add_watched_entry(struct hotloader *hotloader, struct watched_entry entry)
+{
+    if (!hotloader->watch_list) {
+        hotloader->watch_capacity = 32;
+        hotloader->watch_list = (struct watched_entry *) malloc(hotloader->watch_capacity * sizeof(struct watched_entry));
+    }
+
+    if (hotloader->watch_count >= hotloader->watch_capacity) {
+        hotloader->watch_capacity = (unsigned) ceil(hotloader->watch_capacity * 1.5f);
+        hotloader->watch_list = (struct watched_entry *) realloc(hotloader->watch_list, hotloader->watch_capacity * sizeof(struct watched_entry));
+    }
+
+    hotloader->watch_list[hotloader->watch_count++] = entry;
+}
+
 bool hotloader_add_catalog(struct hotloader *hotloader, const char *directory, const char *extension)
 {
     if (hotloader->enabled) return false;
@@ -168,7 +213,7 @@ bool hotloader_add_catalog(struct hotloader *hotloader, const char *directory, c
     enum watch_kind kind = resolve_watch_kind(real_path);
     if (kind != WATCH_KIND_CATALOG) return false;
 
-    struct watched_entry entry = {
+    hotloader_add_watched_entry(hotloader, (struct watched_entry) {
         .kind = WATCH_KIND_CATALOG,
         .catalog_info = {
             .directory = real_path,
@@ -176,8 +221,7 @@ bool hotloader_add_catalog(struct hotloader *hotloader, const char *directory, c
                        ? copy_string(extension)
                        : NULL
         }
-    };
-    hotloader->watch_list[hotloader->watch_count++] = entry;
+    });
 
     return true;
 }
@@ -192,15 +236,14 @@ bool hotloader_add_file(struct hotloader *hotloader, const char *file)
     enum watch_kind kind = resolve_watch_kind(real_path);
     if (kind != WATCH_KIND_FILE) return false;
 
-    struct watched_entry entry = {
+    hotloader_add_watched_entry(hotloader, (struct watched_entry) {
         .kind = WATCH_KIND_FILE,
         .file_info = {
             .absolutepath = real_path,
             .directory = file_directory(real_path),
             .filename = file_name(real_path)
         }
-    };
-    hotloader->watch_list[hotloader->watch_count++] = entry;
+    });
 
     return true;
 }
@@ -276,5 +319,6 @@ void hotloader_end(struct hotloader *hotloader)
     }
 
     CFRelease(hotloader->path);
+    free(hotloader->watch_list);
     memset(hotloader, 0, sizeof(struct hotloader));
 }
