@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/koekeishiya/skhd.svg?branch=master)](https://travis-ci.org/koekeishiya/skhd)
 
-**skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd**](https://github.com/koekeishiya/khd)
+**skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd** (*no longer maintained*)](https://github.com/koekeishiya/khd)
 (although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
@@ -51,6 +51,12 @@ Requires xcode-8 command-line tools.
 
 -c | --config: Specify location of config file
     skhd -c ~/.skhdrc
+
+-k | --key: Synthesize a keypress (same syntax as when defining a hotkey)
+    skhd -k "shift + alt - 7"
+
+-t | --text: Synthesize a line of text
+    skhd -t "ello, worldシ"
 ```
 
 ### Configuration
