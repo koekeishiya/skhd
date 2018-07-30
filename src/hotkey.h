@@ -49,7 +49,10 @@ enum hotkey_flag
     Hotkey_Flag_Hyper       = (Hotkey_Flag_Cmd |
                                Hotkey_Flag_Alt |
                                Hotkey_Flag_Shift |
-                               Hotkey_Flag_Control)
+                               Hotkey_Flag_Control),
+    Hotkey_Flag_Meh         = (Hotkey_Flag_Control |
+                               Hotkey_Flag_Shift |
+                               Hotkey_Flag_Alt)
 };
 
 #include "hashtable.h"
