@@ -43,6 +43,8 @@ extern bool CGSIsSecureEventInputSet();
 #define END_TIMED_BLOCK()
 #endif
 
+#define SKHD_CONFIG_FILE ".skhdrc"
+
 internal unsigned major_version = 0;
 internal unsigned minor_version = 2;
 internal unsigned patch_version = 4;
@@ -177,17 +179,20 @@ check_privileges()
 }
 
 internal void
-set_config_path()
+use_default_config_path()
 {
     char *home = getenv("HOME");
-    if (home) {
-        int length = strlen(home) + strlen("/.skhdrc");
-        config_file = (char *) malloc(length + 1);
-        strcpy(config_file, home);
-        strcat(config_file, "/.skhdrc");
-    } else {
-        config_file = strdup(".skhdrc");
+    if (!home) {
+        error("skhd: could not locate config because 'env HOME' was not set! abort..\n");
     }
+
+    int home_len = strlen(home);
+    int config_len = strlen("/"SKHD_CONFIG_FILE);
+    int length = home_len + config_len;
+    config_file = malloc(length + 1);
+    memcpy(config_file, home, home_len);
+    memcpy(config_file + home_len, "/"SKHD_CONFIG_FILE, config_len);
+    config_file[length] = '\0';
 }
 
 int main(int argc, char **argv)
@@ -213,7 +218,7 @@ int main(int argc, char **argv)
     }
 
     if (!config_file) {
-        set_config_path();
+        use_default_config_path();
     }
 
     printf("skhd: using config '%s'\n", config_file);
