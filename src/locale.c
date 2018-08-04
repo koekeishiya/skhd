@@ -4,7 +4,6 @@
 #include <IOKit/hidsystem/ev_keymap.h>
 
 #define internal static
-#define local_persist static
 
 internal struct table keymap_table;
 

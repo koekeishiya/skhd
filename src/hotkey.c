@@ -1,7 +1,6 @@
 #include "hotkey.h"
 
 #define internal static
-#define local_persist static
 
 #define HOTKEY_FOUND           ((1) << 0)
 #define MODE_CAPTURE(a)        ((a) << 1)
