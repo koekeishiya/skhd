@@ -46,6 +46,9 @@ Requires xcode-8 command-line tools.
 ### Usage
 
 ```
+-V | --verbose: Output debug information
+    skhd -V
+
 -v | --version: Print version number to stdout
     skhd -v
 

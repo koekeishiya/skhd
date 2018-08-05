@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <Carbon/Carbon.h>
 
+#include "log.h"
 #define HASHTABLE_IMPLEMENTATION
 #include "hashtable.h"
 #include "sbuffer.h"
@@ -32,14 +33,26 @@ extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
 #ifdef SKHD_PROFILE
-#define BEGIN_TIMED_BLOCK() \
-    clock_t timed_block_begin = clock()
+#define BEGIN_SCOPED_TIMED_BLOCK(note) \
+    do { \
+        char *timed_note = note; \
+        clock_t timed_block_begin = clock()
+#define END_SCOPED_TIMED_BLOCK() \
+        clock_t timed_block_end = clock(); \
+        double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
+        printf("%.4fms (%s)\n", timed_block_elapsed, timed_note); \
+    } while (0)
+#define BEGIN_TIMED_BLOCK(note) \
+        char *timed_note = note; \
+        clock_t timed_block_begin = clock()
 #define END_TIMED_BLOCK() \
-    clock_t timed_block_end = clock(); \
-    double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
-    printf("elapsed time: %.4fms\n", timed_block_elapsed)
+        clock_t timed_block_end = clock(); \
+        double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
+        printf("%.4fms (%s)\n", timed_block_elapsed, timed_note)
 #else
-#define BEGIN_TIMED_BLOCK()
+#define BEGIN_SCOPED_TIMED_BLOCK(note)
+#define END_SCOPED_TIMED_BLOCK()
+#define BEGIN_TIMED_BLOCK(note)
 #define END_TIMED_BLOCK()
 #endif
 
@@ -52,25 +65,6 @@ internal unsigned patch_version = 4;
 internal struct mode *current_mode;
 internal struct table mode_map;
 internal char *config_file;
-
-internal void
-error(const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    exit(EXIT_FAILURE);
-}
-
-internal void
-warn(const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-}
 
 internal void
 parse_config_helper(char *absolutepath)
@@ -87,8 +81,10 @@ parse_config_helper(char *absolutepath)
 
 internal HOTLOADER_CALLBACK(config_handler)
 {
+    BEGIN_TIMED_BLOCK("hotload_config");
     free_mode_map(&mode_map);
     parse_config_helper(absolutepath);
+    END_TIMED_BLOCK();
 }
 
 internal EVENT_TAP_CALLBACK(key_handler)
@@ -96,14 +92,14 @@ internal EVENT_TAP_CALLBACK(key_handler)
     switch (type) {
     case kCGEventTapDisabledByTimeout:
     case kCGEventTapDisabledByUserInput: {
-        printf("skhd: restarting event-tap\n");
+        debug("skhd: restarting event-tap\n");
         struct event_tap *event_tap = (struct event_tap *) reference;
         CGEventTapEnable(event_tap->handle, 1);
     } break;
     case kCGEventKeyDown: {
         if (!current_mode) return event;
 
-        BEGIN_TIMED_BLOCK();
+        BEGIN_TIMED_BLOCK("handle_keypress");
         struct hotkey eventkey = create_eventkey(event);
         bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
         END_TIMED_BLOCK();
@@ -127,8 +123,9 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "vc:k:t:";
+    const char *short_option = "Vvc:k:t:";
     struct option long_option[] = {
+        { "verbose", no_argument, NULL, 'V' },
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
         { "key", required_argument, NULL, 'k' },
@@ -138,6 +135,9 @@ parse_arguments(int argc, char **argv)
 
     while ((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
         switch (option) {
+        case 'V': {
+            verbose = true;
+        } break;
         case 'v': {
             printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
             return true;
@@ -197,6 +197,8 @@ use_default_config_path()
 
 int main(int argc, char **argv)
 {
+    BEGIN_TIMED_BLOCK("startup");
+    BEGIN_SCOPED_TIMED_BLOCK("initialization");
     if (parse_arguments(argc, argv)) {
         return EXIT_SUCCESS;
     }
@@ -221,23 +223,32 @@ int main(int argc, char **argv)
         use_default_config_path();
     }
 
-    printf("skhd: using config '%s'\n", config_file);
-    table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
-    parse_config_helper(config_file);
     signal(SIGCHLD, SIG_IGN);
     init_shell();
+    table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
+    END_SCOPED_TIMED_BLOCK();
 
+    BEGIN_SCOPED_TIMED_BLOCK("parse_config");
+    debug("skhd: using config '%s'\n", config_file);
+    parse_config_helper(config_file);
+    END_SCOPED_TIMED_BLOCK();
+
+    BEGIN_SCOPED_TIMED_BLOCK("begin_eventtap");
     struct event_tap event_tap;
     event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
     event_tap_begin(&event_tap, key_handler);
+    END_SCOPED_TIMED_BLOCK();
 
+    BEGIN_SCOPED_TIMED_BLOCK("begin_hotloader");
     struct hotloader hotloader = {};
     if (hotloader_add_file(&hotloader, config_file) &&
         hotloader_begin(&hotloader, config_handler)) {
-        printf("skhd: watching '%s' for changes\n", config_file);
+        debug("skhd: watching '%s' for changes\n", config_file);
     } else {
-        fprintf(stderr, "skhd: could not watch '%s'\n", config_file);
+        warn("skhd: could not watch '%s'\n", config_file);
     }
+    END_SCOPED_TIMED_BLOCK();
+    END_TIMED_BLOCK();
 
     CFRunLoopRun();
     return EXIT_SUCCESS;

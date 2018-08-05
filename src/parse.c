@@ -79,7 +79,7 @@ parse_command(struct parser *parser)
 {
     struct token command = parser_previous(parser);
     char *result = copy_string_count(command.text, command.length);
-    printf("\tcmd: '%s'\n", result);
+    debug("\tcmd: '%s'\n", result);
     return result;
 }
 
@@ -90,7 +90,7 @@ parse_key_hex(struct parser *parser)
     char *hex = copy_string_count(key.text, key.length);
     uint32_t keycode = keycode_from_hex(hex);
     free(hex);
-    printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
+    debug("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
     return keycode;
 }
 
@@ -100,7 +100,7 @@ parse_key(struct parser *parser)
     uint32_t keycode;
     struct token key = parser_previous(parser);
     keycode = keycode_from_char(*key.text);
-    printf("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
+    debug("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
     return keycode;
 }
 
@@ -146,7 +146,7 @@ parse_key_literal(struct parser *parser, struct hotkey *hotkey)
         if (token_equals(key, literal_keycode_str[i])) {
             handle_implicit_literal_flags(hotkey, i);
             hotkey->key = literal_keycode_value[i];
-            printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
+            debug("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
             break;
         }
     }
@@ -170,7 +170,7 @@ parse_modifier(struct parser *parser)
     for (int i = 0; i < array_count(modifier_flags_str); ++i) {
         if (token_equals(modifier, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
-            printf("\tmod: '%s'\n", modifier_flags_str[i]);
+            debug("\tmod: '%s'\n", modifier_flags_str[i]);
             break;
         }
     }
@@ -203,7 +203,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
     }
 
     buf_push(hotkey->mode_list, mode);
-    printf("\tmode: '%s'\n", mode->name);
+    debug("\tmode: '%s'\n", mode->name);
 
     if (parser_match(parser, Token_Comma)) {
         if (parser_match(parser, Token_Identifier)) {
@@ -221,7 +221,7 @@ parse_hotkey(struct parser *parser)
     memset(hotkey, 0, sizeof(struct hotkey));
     bool found_modifier;
 
-    printf("hotkey :: #%d {\n", parser->current_token.line);
+    debug("hotkey :: #%d {\n", parser->current_token.line);
 
     if (parser_match(parser, Token_Identifier)) {
         parse_mode(parser, hotkey);
@@ -282,7 +282,7 @@ parse_hotkey(struct parser *parser)
         goto err;
     }
 
-    printf("}\n");
+    debug("}\n");
     return hotkey;
 
 err:
