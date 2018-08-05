@@ -60,7 +60,7 @@ extern bool CGSIsSecureEventInputSet();
 
 internal unsigned major_version = 0;
 internal unsigned minor_version = 2;
-internal unsigned patch_version = 4;
+internal unsigned patch_version = 5;
 
 internal struct mode *current_mode;
 internal struct table mode_map;
