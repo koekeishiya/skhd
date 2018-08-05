@@ -32,9 +32,6 @@ Requires xcode-8 command-line tools.
       brew install koekeishiya/formulae/skhd
       brew services start skhd
 
-      stdout -> /tmp/skhd.out
-      stderr -> /tmp/skhd.err
-
 **Source**:
 
 Requires xcode-8 command-line tools.
