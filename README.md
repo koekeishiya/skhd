@@ -43,6 +43,9 @@ Requires xcode-8 command-line tools.
       make install      # release version
       make              # debug version
 
+      make fast_profile # release version with profiling information
+      make profile      # debug version with profiling information
+
 ### Usage
 
 ```
