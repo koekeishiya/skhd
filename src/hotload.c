@@ -93,17 +93,8 @@ resolve_symlink(const char *file)
         return copy_string(file);
     }
 
-    ssize_t size = buffer.st_size + 1;
-    char *result = (char *) malloc(size);
-    ssize_t read = readlink(file, result, size);
-
-    if (read != -1) {
-        result[read] = '\0';
-        return result;
-    }
-
-    free(result);
-    return NULL;
+    char *result = realpath(file, NULL);
+    return result;
 }
 
 internal enum watch_kind
