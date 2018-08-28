@@ -27,6 +27,7 @@
 #include "parse.c"
 #include "hotkey.c"
 #include "synthesize.c"
+// #include "carbon.c"
 
 #define internal static
 extern bool CGSIsSecureEventInputSet();
@@ -62,6 +63,9 @@ internal unsigned major_version = 0;
 internal unsigned minor_version = 2;
 internal unsigned patch_version = 5;
 
+// internal struct carbon_event carbon;
+internal struct event_tap event_tap;
+internal struct hotloader hotloader;
 internal struct mode *current_mode;
 internal struct table mode_map;
 internal char *config_file;
@@ -219,6 +223,14 @@ int main(int argc, char **argv)
         error("skhd: could not initialize keycode map! abort..\n");
     }
 
+    /*
+     * NOTE(koekeishiya: hooks up event for tracking name of focused process/application
+     *
+     *  if (!carbon_event_init(&carbon)) {
+     *      error("skhd: could not initialize carbon events! abort..\n");
+     *  }
+     */
+
     if (!config_file) {
         use_default_config_path();
     }
@@ -234,13 +246,11 @@ int main(int argc, char **argv)
     END_SCOPED_TIMED_BLOCK();
 
     BEGIN_SCOPED_TIMED_BLOCK("begin_eventtap");
-    struct event_tap event_tap;
     event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
     event_tap_begin(&event_tap, key_handler);
     END_SCOPED_TIMED_BLOCK();
 
     BEGIN_SCOPED_TIMED_BLOCK("begin_hotloader");
-    struct hotloader hotloader = {};
     if (hotloader_add_file(&hotloader, config_file) &&
         hotloader_begin(&hotloader, config_handler)) {
         debug("skhd: watching '%s' for changes\n", config_file);
