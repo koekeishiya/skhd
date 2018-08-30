@@ -27,6 +27,7 @@ carbon_event_handler(EventHandlerCallRef ref, EventRef event, void *context)
             carbon->process_name = NULL;
         }
 
+        CFStringLowercase(process_name_ref, CFLocaleGetSystem());
         carbon->process_name = copy_cfstring(process_name_ref);
         CFRelease(process_name_ref);
     }
