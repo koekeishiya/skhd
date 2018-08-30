@@ -4,6 +4,28 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
+internal inline char *
+find_process_name_for_psn(ProcessSerialNumber *psn)
+{
+    CFStringRef process_name_ref;
+    if (CopyProcessName(psn, &process_name_ref) == noErr) {
+        char *process_name = copy_cfstring(process_name_ref);
+        for (char *s = process_name; *s; ++s) *s = tolower(*s);
+        CFRelease(process_name_ref);
+        return process_name;
+    }
+    return NULL;
+}
+
+internal inline char *
+find_active_process_name(void)
+{
+    ProcessSerialNumber psn;
+    GetFrontProcess(&psn);
+    return find_process_name_for_psn(&psn);
+}
+#pragma clang diagnostic pop
+
 internal OSStatus
 carbon_event_handler(EventHandlerCallRef ref, EventRef event, void *context)
 {
@@ -20,22 +42,15 @@ carbon_event_handler(EventHandlerCallRef ref, EventRef event, void *context)
         return -1;
     }
 
-    CFStringRef process_name_ref;
-    if (CopyProcessName(&psn, &process_name_ref) == noErr) {
-        if (carbon->process_name) {
-            free(carbon->process_name);
-            carbon->process_name = NULL;
-        }
-
-        carbon->process_name = copy_cfstring(process_name_ref);
-        for (char *s = carbon->process_name; *s; ++s) *s = tolower(*s);
-
-        CFRelease(process_name_ref);
+    if (carbon->process_name) {
+        free(carbon->process_name);
+        carbon->process_name = NULL;
     }
+
+    carbon->process_name = find_process_name_for_psn(&psn);
 
     return noErr;
 }
-#pragma clang diagnostic pop
 
 bool carbon_event_init(struct carbon_event *carbon)
 {
@@ -43,7 +58,8 @@ bool carbon_event_init(struct carbon_event *carbon)
     carbon->handler = NewEventHandlerUPP(carbon_event_handler);
     carbon->type.eventClass = kEventClassApplication;
     carbon->type.eventKind = kEventAppFrontSwitched;
-    carbon->process_name = NULL;
+    carbon->process_name = find_active_process_name();
+    printf("active %s\n", carbon->process_name);
 
     return InstallEventHandler(carbon->target,
                                carbon->handler,
