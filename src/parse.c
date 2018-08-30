@@ -22,8 +22,6 @@ find_or_init_default_mode(struct parser *parser)
     }
 
     default_mode = malloc(sizeof(struct mode));
-    default_mode->line = -1;
-    default_mode->cursor = -1;
     default_mode->name = copy_string("default");
 
     table_init(&default_mode->hotkey_map, 131,
@@ -94,14 +92,14 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
             parse_command(parser, hotkey);
             parse_process_command_list(parser, hotkey);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected ':' followed by command");
+            parser_report_error(parser, parser_peek(parser), "expected ':' followed by command\n");
         }
     } else if (parser_match(parser, Token_EndList)) {
         if (!buf_len(hotkey->process_name)) {
-            parser_report_error(parser, Error_Missing_Value, "list must contain at least one value");
+            parser_report_error(parser, parser_previous(parser), "list must contain at least one value\n");
         }
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected process command mapping or ']'");
+        parser_report_error(parser, parser_peek(parser), "expected process command mapping or ']'\n");
     }
 }
 
@@ -112,7 +110,7 @@ parse_activate(struct parser *parser, struct hotkey *hotkey)
     hotkey->flags |= Hotkey_Flag_Activate;
 
     if (!table_find(parser->mode_map, hotkey->command[0])) {
-        parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+        parser_report_error(parser, parser_previous(parser), "undeclared identifier\n");
     }
 }
 
@@ -212,7 +210,7 @@ parse_modifier(struct parser *parser)
         if (parser_match(parser, Token_Modifier)) {
             flags |= parse_modifier(parser);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected modifier");
+            parser_report_error(parser, parser_peek(parser), "expected modifier\n");
         }
     }
 
@@ -231,7 +229,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
     if (!mode && token_equals(identifier, "default")) {
         mode = find_or_init_default_mode(parser);
     } else if (!mode) {
-        parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+        parser_report_error(parser, identifier, "undeclared identifier\n");
         return;
     }
 
@@ -242,7 +240,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
         if (parser_match(parser, Token_Identifier)) {
             parse_mode(parser, hotkey);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected identifier");
+            parser_report_error(parser, parser_peek(parser), "expected identifier\n");
         }
     }
 }
@@ -265,7 +263,7 @@ parse_hotkey(struct parser *parser)
 
     if (buf_len(hotkey->mode_list) > 0) {
         if (!parser_match(parser, Token_Insert)) {
-            parser_report_error(parser, Error_Unexpected_Token, "expected '<'");
+            parser_report_error(parser, parser_peek(parser), "expected '<'\n");
             goto err;
         }
     } else {
@@ -281,7 +279,7 @@ parse_hotkey(struct parser *parser)
 
     if (found_modifier) {
         if (!parser_match(parser, Token_Dash)) {
-            parser_report_error(parser, Error_Unexpected_Token, "expected '-'");
+            parser_report_error(parser, parser_peek(parser), "expected '-'\n");
             goto err;
         }
     }
@@ -293,7 +291,7 @@ parse_hotkey(struct parser *parser)
     } else if (parser_match(parser, Token_Literal)) {
         parse_key_literal(parser, hotkey);
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected key-literal");
+        parser_report_error(parser, parser_peek(parser), "expected key-literal\n");
         goto err;
     }
 
@@ -314,7 +312,7 @@ parse_hotkey(struct parser *parser)
             goto err;
         }
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected ':' followed by command or ';' followed by mode");
+        parser_report_error(parser, parser_peek(parser), "expected ':' followed by command or ';' followed by mode\n");
         goto err;
     }
 
@@ -332,8 +330,6 @@ parse_mode_decl(struct parser *parser)
     struct mode *mode = malloc(sizeof(struct mode));
     struct token identifier = parser_previous(parser);
 
-    mode->line = identifier.line;
-    mode->cursor = identifier.cursor;
     mode->name = copy_string_count(identifier.text, identifier.length);
 
     table_init(&mode->hotkey_map, 131,
@@ -357,19 +353,17 @@ parse_mode_decl(struct parser *parser)
 
 void parse_declaration(struct parser *parser)
 {
-    struct mode *mode;
     parser_match(parser, Token_Decl);
     if (parser_match(parser, Token_Identifier)) {
-        mode = parse_mode_decl(parser);
+        struct token identifier = parser_previous(parser);
+        struct mode *mode = parse_mode_decl(parser);
         if (table_find(parser->mode_map, mode->name)) {
-            parser_report_error(parser, Error_Duplicate_Ident,
-                                "#%d:%d duplicate declaration '%s'\n",
-                                mode->line, mode->cursor, mode->name);
+            parser_report_error(parser, identifier, "duplicate declaration '%s'\n", mode->name);
         } else {
             table_add(parser->mode_map, mode->name, mode);
         }
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected identifier");
+        parser_report_error(parser, parser_peek(parser), "expected identifier\n");
     }
 }
 
@@ -398,7 +392,7 @@ void parse_config(struct parser *parser)
         } else if (parser_check(parser, Token_Decl)) {
             parse_declaration(parser);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected decl, modifier or key-literal");
+            parser_report_error(parser, parser_peek(parser), "expected decl, modifier or key-literal\n");
         }
     }
 }
@@ -491,27 +485,12 @@ bool parser_match(struct parser *parser, enum token_type type)
     return false;
 }
 
-void parser_report_error(struct parser *parser, enum parse_error_type error_type, const char *format, ...)
+void parser_report_error(struct parser *parser, struct token token, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-
-    if (error_type == Error_Unexpected_Token) {
-        fprintf(stderr, "#%d:%d ", parser->current_token.line, parser->current_token.cursor);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, ", but got '%.*s'\n", parser->current_token.length, parser->current_token.text);
-    } else if (error_type == Error_Undeclared_Ident) {
-        fprintf(stderr, "#%d:%d ", parser->previous_token.line, parser->previous_token.cursor);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, " '%.*s'\n", parser->previous_token.length, parser->previous_token.text);
-    } else if (error_type == Error_Missing_Value) {
-        fprintf(stderr, "#%d:%d ", parser->previous_token.line, parser->previous_token.cursor);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, "\n");
-    } else if (error_type == Error_Duplicate_Ident) {
-        vfprintf(stderr, format, args);
-    }
-
+    fprintf(stderr, "#%d:%d ", token.line, token.cursor);
+    vfprintf(stderr, format, args);
     va_end(args);
     parser->error = true;
 }

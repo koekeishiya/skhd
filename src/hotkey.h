@@ -61,8 +61,6 @@ struct carbon_event;
 
 struct mode
 {
-    int line;
-    int cursor;
     char *name;
     char *command;
     bool capture;
