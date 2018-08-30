@@ -61,8 +61,8 @@ extern bool CGSIsSecureEventInputSet();
 #define SKHD_CONFIG_FILE ".skhdrc"
 
 internal unsigned major_version = 0;
-internal unsigned minor_version = 2;
-internal unsigned patch_version = 5;
+internal unsigned minor_version = 3;
+internal unsigned patch_version = 0;
 
 internal struct carbon_event carbon;
 internal struct event_tap event_tap;
