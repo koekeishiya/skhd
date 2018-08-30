@@ -304,7 +304,7 @@ parse_hotkey(struct parser *parser)
     if (parser_match(parser, Token_Command)) {
         parse_command(parser, hotkey);
     } else if (parser_match(parser, Token_BeginList)) {
-        parse_process_command_list(parser);
+        parse_process_command_list(parser, hotkey);
         if (parser->error) {
             goto err;
         }

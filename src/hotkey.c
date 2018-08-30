@@ -96,13 +96,6 @@ unsigned long hash_mode(char *key)
     return hash;
 }
 
-internal inline bool
-same_string(char *a, char *b)
-{
-    if (!a || !b) return false;
-    return same_mode(a, b);
-}
-
 internal inline void
 fork_and_exec(char *command)
 {
@@ -158,7 +151,7 @@ find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct ca
         }
     }
 
-    *capture &= ~FOUND_HOTKEY;
+    *capture &= ~HOTKEY_FOUND;
     return NULL;
 }
 
