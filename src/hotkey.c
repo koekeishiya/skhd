@@ -193,8 +193,15 @@ void free_mode_map(struct table *mode_map)
 
             buf_push(freed_pointers, hotkey);
             buf_free(hotkey->mode_list);
-            buf_free(hotkey->process_name);
-            buf_free(hotkey->command);
+
+            for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
+                free(hotkey->process_name[i]);
+            }
+
+            for (int i = 0; i < buf_len(hotkey->command); ++i) {
+                free(hotkey->command[i]);
+            }
+
             free(hotkey);
 next:;
         }
