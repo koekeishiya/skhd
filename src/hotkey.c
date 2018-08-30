@@ -96,6 +96,13 @@ unsigned long hash_mode(char *key)
     return hash;
 }
 
+internal inline bool
+same_string(char *a, char *b)
+{
+    if (!a || !b) return false;
+    return same_mode(a, b);
+}
+
 internal inline void
 fork_and_exec(char *command)
 {
@@ -142,14 +149,29 @@ should_capture_hotkey(uint32_t capture)
     return (capture & MODE_CAPTURE(1));
 }
 
-bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m)
+internal inline char *
+find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct carbon_event *carbon)
+{
+    for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
+        if (same_string(carbon->process_name, hotkey->process_name[i])) {
+            return hotkey->command[i];
+        }
+    }
+
+    *capture &= ~FOUND_HOTKEY;
+    return NULL;
+}
+
+bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon)
 {
     uint32_t c = MODE_CAPTURE((int)(*m)->capture);
     for (struct hotkey *h = find_hotkey(*m, k, &c); h; passthrough(h, &c), h = 0) {
-        char *cmd = h->command;
+        char *cmd = h->command[0];
         if (has_flags(h, Hotkey_Flag_Activate)) {
             *m = table_find(t, cmd);
             cmd = (*m)->command;
+        } else if (buf_len(h->process_name) > 0) {
+            cmd = find_process_command_mapping(h, &c, carbon);
         }
         if (cmd) fork_and_exec(cmd);
     }
@@ -178,7 +200,8 @@ void free_mode_map(struct table *mode_map)
 
             buf_push(freed_pointers, hotkey);
             buf_free(hotkey->mode_list);
-            free(hotkey->command);
+            buf_free(hotkey->process_name);
+            buf_free(hotkey->command);
             free(hotkey);
 next:;
         }

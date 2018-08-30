@@ -74,13 +74,46 @@ keycode_from_hex(char *hex)
     return result;
 }
 
-internal char *
-parse_command(struct parser *parser)
+internal void
+parse_command(struct parser *parser, struct hotkey *hotkey)
 {
     struct token command = parser_previous(parser);
     char *result = copy_string_count(command.text, command.length);
     debug("\tcmd: '%s'\n", result);
-    return result;
+    buf_push(hotkey->command, result);
+}
+
+internal void
+parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
+{
+    if (parser_match(parser, Token_String)) {
+        struct token name_token = parser_previous(parser);
+        char *name = copy_string_count(name_token.text, name_token.length);
+        buf_push(hotkey->process_name, name);
+        if (parser_match(parser, Token_Command)) {
+            parse_command(parser, hotkey);
+            parse_process_command_list(parser, hotkey);
+        } else {
+            parser_report_error(parser, Error_Unexpected_Token, "expected ':' followed by command");
+        }
+    } else if (parser_match(parser, Token_EndList)) {
+        if (!buf_len(hotkey->process_name)) {
+            parser_report_error(parser, Error_Missing_Value, "list must contain at least one value");
+        }
+    } else {
+        parser_report_error(parser, Error_Unexpected_Token, "expected process command mapping or ']'");
+    }
+}
+
+internal void
+parse_activate(struct parser *parser, struct hotkey *hotkey)
+{
+    parse_command(parser, hotkey);
+    hotkey->flags |= Hotkey_Flag_Activate;
+
+    if (!table_find(parser->mode_map, hotkey->command[0])) {
+        parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+    }
 }
 
 internal uint32_t
@@ -269,12 +302,15 @@ parse_hotkey(struct parser *parser)
     }
 
     if (parser_match(parser, Token_Command)) {
-        hotkey->command = parse_command(parser);
+        parse_command(parser, hotkey);
+    } else if (parser_match(parser, Token_BeginList)) {
+        parse_process_command_list(parser);
+        if (parser->error) {
+            goto err;
+        }
     } else if (parser_match(parser, Token_Activate)) {
-        hotkey->flags |= Hotkey_Flag_Activate;
-        hotkey->command = parse_command(parser);
-        if (!table_find(parser->mode_map, hotkey->command)) {
-            parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+        parse_activate(parser, hotkey);
+        if (parser->error) {
             goto err;
         }
     } else {
@@ -468,6 +504,10 @@ void parser_report_error(struct parser *parser, enum parse_error_type error_type
         fprintf(stderr, "#%d:%d ", parser->previous_token.line, parser->previous_token.cursor);
         vfprintf(stderr, format, args);
         fprintf(stderr, " '%.*s'\n", parser->previous_token.length, parser->previous_token.text);
+    } else if (error_type == Error_Missing_Value) {
+        fprintf(stderr, "#%d:%d ", parser->previous_token.line, parser->previous_token.cursor);
+        vfprintf(stderr, format, args);
+        fprintf(stderr, "\n");
     } else if (error_type == Error_Duplicate_Ident) {
         vfprintf(stderr, format, args);
     }

@@ -57,6 +57,8 @@ enum hotkey_flag
 
 #include "hashtable.h"
 
+struct carbon_event;
+
 struct mode
 {
     int line;
@@ -71,7 +73,8 @@ struct hotkey
 {
     uint32_t flags;
     uint32_t key;
-    char *command;
+    char **process_name;
+    char **command;
     struct mode **mode_list;
 };
 
@@ -103,7 +106,7 @@ unsigned long hash_hotkey(struct hotkey *a);
 struct hotkey create_eventkey(CGEventRef event);
 bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
+bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon);
 void free_mode_map(struct table *mode_map);
 
 void init_shell();

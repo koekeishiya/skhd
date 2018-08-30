@@ -49,6 +49,10 @@ enum token_type
     Token_Dash,
     Token_Arrow,
     Token_Capture,
+    Token_String,
+
+    Token_BeginList,
+    Token_EndList,
 
     Token_Unknown,
     Token_EndOfStream,

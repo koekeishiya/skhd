@@ -15,6 +15,7 @@
 #include "hotload.h"
 #include "event_tap.h"
 #include "locale.h"
+#include "carbon.h"
 #include "tokenize.h"
 #include "parse.h"
 #include "hotkey.h"
@@ -23,11 +24,11 @@
 #include "hotload.c"
 #include "event_tap.c"
 #include "locale.c"
+#include "carbon.c"
 #include "tokenize.c"
 #include "parse.c"
 #include "hotkey.c"
 #include "synthesize.c"
-// #include "carbon.c"
 
 #define internal static
 extern bool CGSIsSecureEventInputSet();
@@ -63,7 +64,7 @@ internal unsigned major_version = 0;
 internal unsigned minor_version = 2;
 internal unsigned patch_version = 5;
 
-// internal struct carbon_event carbon;
+internal struct carbon_event carbon;
 internal struct event_tap event_tap;
 internal struct hotloader hotloader;
 internal struct mode *current_mode;
@@ -105,7 +106,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
 
         BEGIN_TIMED_BLOCK("handle_keypress");
         struct hotkey eventkey = create_eventkey(event);
-        bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
+        bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode, &carbon);
         END_TIMED_BLOCK();
 
         if (result) return NULL;
@@ -115,7 +116,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
 
         struct hotkey eventkey;
         if (intercept_systemkey(event, &eventkey)) {
-            bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
+            bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode, &carbon);
             if (result) return NULL;
         }
     } break;
@@ -223,13 +224,9 @@ int main(int argc, char **argv)
         error("skhd: could not initialize keycode map! abort..\n");
     }
 
-    /*
-     * NOTE(koekeishiya: hooks up event for tracking name of focused process/application
-     *
-     *  if (!carbon_event_init(&carbon)) {
-     *      error("skhd: could not initialize carbon events! abort..\n");
-     *  }
-     */
+    if (!carbon_event_init(&carbon)) {
+        error("skhd: could not initialize carbon events! abort..\n");
+    }
 
     if (!config_file) {
         use_default_config_path();

@@ -19,6 +19,7 @@ enum parse_error_type
     Error_Unexpected_Token,
     Error_Undeclared_Ident,
     Error_Duplicate_Ident,
+    Error_Missing_Value,
 };
 
 
