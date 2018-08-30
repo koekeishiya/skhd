@@ -12,7 +12,7 @@ feature comparison between **skhd** and **khd**
 | hotkey passthrough         | [x]  | [x] |
 | modal hotkey-system        | [x]  | [x] |
 | use media-keys as hotkey   | [x]  | [ ] |
-| application specific hotkey| [ ]  | [x] |
+| application specific hotkey| [x]  | [x] |
 | modifier only hotkey       | [ ]  | [x] |
 | caps-lock as hotkey        | [ ]  | [x] |
 | mouse-buttons as hotkey    | [ ]  | [x] |
@@ -72,35 +72,42 @@ A list of all built-in modifier and literal keywords can be found [here](https:/
 
 A hotkey is written according to the following rules:
 ```
-hotkey   = <mode> '<' <action> | <action>
+hotkey       = <mode> '<' <action> | <action>
 
-mode     = 'name of mode' | <mode> ',' <mode>
+mode         = 'name of mode' | <mode> ',' <mode>
 
-action   = <keysym> ':' <command> | <keysym> '->' ':' <command>
-           <keysym> ';' <mode>    | <keysym> '->' ';' <mode>
+action       = <keysym> '[' <proc_map_lst> ']' | <keysym> '->' '[' <proc_map_lst> ']'
+               <keysym> ':' <command>          | <keysym> '->' ':' <command>
+               <keysym> ';' <mode>             | <keysym> '->' ';' <mode>
 
-keysym   = <mod> '-' <key> | <key>
+keysym       = <mod> '-' <key> | <key>
 
-mod      = 'modifier keyword' | <mod> '+' <mod>
+mod          = 'modifier keyword' | <mod> '+' <mod>
 
-key      = <literal> | <keycode>
+key          = <literal> | <keycode>
 
-literal  = 'single letter or built-in keyword'
+literal      = 'single letter or built-in keyword'
 
-keycode  = 'apple keyboard kVK_<Key> values (0x3C)'
+keycode      = 'apple keyboard kVK_<Key> values (0x3C)'
 
-->       = keypress is not consumed by skhd
+proc_map_lst = * <proc_map>
 
-command  = command is executed through '$SHELL -c' and
-           follows valid shell syntax. if the $SHELL environment
-           variable is not set, it will default to '/bin/bash'.
-           when bash is used, the ';' delimeter can be specified
-           to chain commands.
+proc_map     = <string> ':' <command>
 
-           to allow a command to extend into multiple lines,
-           prepend '\' at the end of the previous line.
+string       = '"' 'sequence of characters' '"'
 
-           an EOL character signifies the end of the bind.
+command      = command is executed through '$SHELL -c' and
+               follows valid shell syntax. if the $SHELL environment
+               variable is not set, it will default to '/bin/bash'.
+               when bash is used, the ';' delimeter can be specified
+               to chain commands.
+
+               to allow a command to extend into multiple lines,
+               prepend '\' at the end of the previous line.
+
+               an EOL character signifies the end of the bind.
+
+->           = keypress is not consumed by skhd
 ```
 
 A mode is declared according to the following rules:
