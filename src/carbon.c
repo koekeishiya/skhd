@@ -27,7 +27,9 @@ carbon_event_handler(EventHandlerCallRef ref, EventRef event, void *context)
             carbon->process_name = NULL;
         }
 
-        CFStringLowercase(process_name_ref, CFLocaleGetSystem());
+        // NOTE(koekeishiya): Might want to call ProcessInformationCopyDictionary instead.
+        // http://mirror.informatimago.com/next/developer.apple.com/documentation/Carbon/Reference/Process_Manager/prmref_main/function_group_1.html#//apple_ref/c/func/GetProcessInformationCopyDictionary
+        CFStringLowercase((CFMutableStringRef)process_name_ref, CFLocaleGetSystem());
         carbon->process_name = copy_cfstring(process_name_ref);
         CFRelease(process_name_ref);
     }
