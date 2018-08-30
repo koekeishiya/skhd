@@ -59,7 +59,6 @@ bool carbon_event_init(struct carbon_event *carbon)
     carbon->type.eventClass = kEventClassApplication;
     carbon->type.eventKind = kEventAppFrontSwitched;
     carbon->process_name = find_active_process_name();
-    printf("active %s\n", carbon->process_name);
 
     return InstallEventHandler(carbon->target,
                                carbon->handler,
