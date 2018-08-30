@@ -87,6 +87,7 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
     if (parser_match(parser, Token_String)) {
         struct token name_token = parser_previous(parser);
         char *name = copy_string_count(name_token.text, name_token.length);
+        for (char *s = name; *s; ++s) *s = tolower(*s);
         buf_push(hotkey->process_name, name);
         if (parser_match(parser, Token_Command)) {
             parse_command(parser, hotkey);
