@@ -283,7 +283,7 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey)
     return result;
 }
 
-void init_shell()
+void init_shell(void)
 {
     if (!shell) {
         char *env_shell = getenv("SHELL");

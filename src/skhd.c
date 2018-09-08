@@ -165,7 +165,7 @@ parse_arguments(int argc, char **argv)
 }
 
 internal bool
-check_privileges()
+check_privileges(void)
 {
     bool result;
     const void *keys[] = { kAXTrustedCheckOptionPrompt };
@@ -184,7 +184,7 @@ check_privileges()
 }
 
 internal void
-use_default_config_path()
+use_default_config_path(void)
 {
     char *home = getenv("HOME");
     if (!home) {

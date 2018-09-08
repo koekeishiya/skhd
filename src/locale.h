@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-bool initialize_keycode_map();
+bool initialize_keycode_map(void);
 uint32_t keycode_from_char(char key);
 
 #endif

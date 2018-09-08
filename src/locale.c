@@ -85,7 +85,7 @@ cfstring_from_keycode(UCKeyboardLayout *keyboard_layout, CGKeyCode keycode)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
-bool initialize_keycode_map()
+bool initialize_keycode_map(void)
 {
     TISInputSourceRef keyboard = TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
     CFDataRef uchr = (CFDataRef) TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
