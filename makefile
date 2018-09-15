@@ -11,7 +11,7 @@ all: clean $(BINS)
 install: BUILD_FLAGS=-std=c99 -O3
 install: clean $(BINS)
 
-profile: BUILD_FLAGS=-std=c99 -Wall -g -O0 -DSKHD_PROFILE
+profile: BUILD_FLAGS=-std=c99 -Wall -g -O0 -DSKHD_PROFILE -fsanitize=address,undefined -fno-omit-frame-pointer
 profile: clean $(BINS)
 
 fast_profile: BUILD_FLAGS=-std=c99 -O3 -DSKHD_PROFILE
