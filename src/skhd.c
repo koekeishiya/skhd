@@ -128,12 +128,13 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "Vvc:k:t:";
+    const char *short_option = "Vvc:k:a:t:";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
         { "key", required_argument, NULL, 'k' },
+        { "ascii", required_argument, NULL, 'a' },
         { "text", required_argument, NULL, 't' },
         { NULL, 0, NULL, 0 }
     };
@@ -152,6 +153,10 @@ parse_arguments(int argc, char **argv)
         } break;
         case 'k': {
             synthesize_key(optarg);
+            return true;
+        } break;
+        case 'a': {
+            synthesize_ascii(optarg);
             return true;
         } break;
         case 't': {

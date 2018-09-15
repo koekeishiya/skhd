@@ -63,6 +63,32 @@ void synthesize_key(char *key_string)
     synthesize_modifiers(hotkey, false);
 }
 
+void synthesize_ascii(char *text){
+  size_t n = strlen(text);
+  for (size_t i = 0; i < n; i++){
+    // take 1 char from ascii text
+    char c[2];
+    memcpy(c, &text[i], 1);
+    c[1] = '\0';
+
+    if (!initialize_keycode_map()) continue;
+    struct parser parser;
+
+    parser_init_text(&parser, c);
+    struct hotkey *hotkey = parse_keypress(&parser);
+    if (!hotkey) continue;
+    CGSetLocalEventsSuppressionInterval(0.0f);
+    CGEnableEventStateCombining(false);
+
+    create_and_post_keyevent(hotkey->key, true);
+    create_and_post_keyevent(hotkey->key, false);
+    usleep(300);
+    free(hotkey);
+  }
+  close(1);
+  close(2);
+}
+
 void synthesize_text(char *text)
 {
     CFStringRef text_ref = CFStringCreateWithCString(NULL, text, kCFStringEncodingUTF8);
