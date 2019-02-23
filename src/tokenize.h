@@ -49,6 +49,8 @@ enum token_type
     Token_Dash,
     Token_Arrow,
     Token_Capture,
+    Token_Unbound,
+    Token_Wildcard,
     Token_String,
 
     Token_BeginList,

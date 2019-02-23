@@ -146,6 +146,8 @@ get_token(struct tokenizer *tokenizer)
     case ',': { token.type = Token_Comma;       } break;
     case '<': { token.type = Token_Insert;      } break;
     case '@': { token.type = Token_Capture;     } break;
+    case '~': { token.type = Token_Unbound;     } break;
+    case '*': { token.type = Token_Wildcard;    } break;
     case '[': { token.type = Token_BeginList;   } break;
     case ']': { token.type = Token_EndList;     } break;
     case '"': {

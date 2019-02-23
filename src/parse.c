@@ -92,8 +92,24 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
         if (parser_match(parser, Token_Command)) {
             parse_command(parser, hotkey);
             parse_process_command_list(parser, hotkey);
+        } else if (parser_match(parser, Token_Unbound)) {
+            buf_push(hotkey->command, NULL);
+            parse_process_command_list(parser, hotkey);
         } else {
-            parser_report_error(parser, parser_peek(parser), "expected ':' followed by command\n");
+            parser_report_error(parser, parser_peek(parser), "expected '~' or ':' followed by command\n");
+        }
+    } else if (parser_match(parser, Token_Wildcard)) {
+        if (parser_match(parser, Token_Command)) {
+            struct token command = parser_previous(parser);
+            char *result = copy_string_count(command.text, command.length);
+            debug("\tcmd: '%s'\n", result);
+            hotkey->wildcard_command = result;
+            parse_process_command_list(parser, hotkey);
+        } else if (parser_match(parser, Token_Unbound)) {
+            hotkey->wildcard_command = NULL;
+            parse_process_command_list(parser, hotkey);
+        } else {
+            parser_report_error(parser, parser_peek(parser), "expected '~' or ':' followed by command\n");
         }
     } else if (parser_match(parser, Token_EndList)) {
         if (!buf_len(hotkey->process_name)) {

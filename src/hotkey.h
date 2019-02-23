@@ -73,6 +73,7 @@ struct hotkey
     uint32_t key;
     char **process_name;
     char **command;
+    char *wildcard_command;
     struct mode **mode_list;
 };
 

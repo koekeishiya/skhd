@@ -23,7 +23,8 @@
 #
 #                       proc_map_lst = * <proc_map>
 #
-#                       proc_map     = <string> ':' <command>
+#                       proc_map     = <string> ':' <command> | <string> ':' '~' |
+#                                      '*'      ':' <command> | '*'          '~'
 #
 #                       string       = '"' 'sequence of characters' '"'
 #
@@ -79,7 +80,9 @@
 #
 # cmd - n [
 #     "kitty"       : echo "hello kitty"
+#     *             : echo "hello everyone"
 #     "qutebrowser" : echo "hello qutebrowser"
+#     "terminal"    ~
 #     "finder"      : false
 # ]
 
@@ -257,3 +260,4 @@ ctrl + alt - s : chunkc tiling::desktop --layout monocle
 ctrl + alt - d : chunkc tiling::desktop --layout float
 
 ctrl + alt - w : chunkc tiling::desktop --deserialize ~/.chunkwm_layouts/dev_1
+

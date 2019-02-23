@@ -145,14 +145,21 @@ should_capture_hotkey(uint32_t capture)
 internal inline char *
 find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct carbon_event *carbon)
 {
+    char *result = NULL;
+    bool found = false;
+
     for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
         if (same_string(carbon->process_name, hotkey->process_name[i])) {
-            return hotkey->command[i];
+            result = hotkey->command[i];
+            found = true;
+            break;
         }
     }
 
-    *capture &= ~HOTKEY_FOUND;
-    return NULL;
+    if (!found) result = hotkey->wildcard_command;
+    if (!result) *capture &= ~HOTKEY_FOUND;
+
+    return result;
 }
 
 bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon)
