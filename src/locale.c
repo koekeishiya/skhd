@@ -83,6 +83,13 @@ cfstring_from_keycode(UCKeyboardLayout *keyboard_layout, CGKeyCode keycode)
     return NULL;
 }
 
+uint32_t keycode_from_char(char key)
+{
+    char lookup_key[] = { key, '\0' };
+    uint32_t keycode = (uint32_t) table_find(&keymap_table, &lookup_key);
+    return keycode;
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
 bool initialize_keycode_map(void)
@@ -94,6 +101,7 @@ bool initialize_keycode_map(void)
     UCKeyboardLayout *keyboard_layout = (UCKeyboardLayout *) CFDataGetBytePtr(uchr);
     if (!keyboard_layout) return false;
 
+    table_free(&keymap_table);
     table_init(&keymap_table,
                131,
                (table_hash_func) hash_keymap,
@@ -113,10 +121,3 @@ bool initialize_keycode_map(void)
     return true;
 }
 #pragma clang diagnostic pop
-
-uint32_t keycode_from_char(char key)
-{
-    char lookup_key[] = { key, '\0' };
-    uint32_t keycode = (uint32_t) table_find(&keymap_table, &lookup_key);
-    return keycode;
-}

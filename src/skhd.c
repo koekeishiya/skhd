@@ -87,8 +87,20 @@ parse_config_helper(char *absolutepath)
 internal HOTLOADER_CALLBACK(config_handler)
 {
     BEGIN_TIMED_BLOCK("hotload_config");
+    debug("skhd: config-file has been modified.. reloading config\n");
     free_mode_map(&mode_map);
     parse_config_helper(absolutepath);
+    END_TIMED_BLOCK();
+}
+
+internal CF_NOTIFICATION_CALLBACK(keymap_handler)
+{
+    BEGIN_TIMED_BLOCK("keymap_changed");
+    if (initialize_keycode_map()) {
+        debug("skhd: input source changed.. reloading config\n");
+        free_mode_map(&mode_map);
+        parse_config_helper(config_file);
+    }
     END_TIMED_BLOCK();
 }
 
@@ -231,6 +243,13 @@ int main(int argc, char **argv)
     if (!config_file) {
         use_default_config_path();
     }
+
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),
+                                    NULL,
+                                    &keymap_handler,
+                                    kTISNotifySelectedKeyboardInputSourceChanged,
+                                    NULL,
+                                    CFNotificationSuspensionBehaviorCoalesce);
 
     signal(SIGCHLD, SIG_IGN);
     init_shell();

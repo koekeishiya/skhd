@@ -76,7 +76,10 @@ void table_free(struct table *table)
             bucket = next;
         }
     }
-    free(table->buckets);
+    if (table->buckets) {
+        free(table->buckets);
+        table->buckets = NULL;
+    }
 }
 
 void *table_find(struct table *table, void *key)
