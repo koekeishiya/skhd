@@ -40,14 +40,14 @@ Requires xcode-8 command-line tools.
       make install      # release version
       make              # debug version
 
-      make fast_profile # release version with profiling information
-      make profile      # debug version with profiling information
-
 ### Usage
 
 ```
 -V | --verbose: Output debug information
     skhd -V
+
+-P | --profile: Output profiling information
+    skhd -P
 
 -v | --version: Print version number to stdout
     skhd -v

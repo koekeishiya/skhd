@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <Carbon/Carbon.h>
 
+#include "timing.h"
 #include "log.h"
 #define HASHTABLE_IMPLEMENTATION
 #include "hashtable.h"
@@ -33,30 +34,6 @@
 #define internal static
 extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
-
-#ifdef SKHD_PROFILE
-#define BEGIN_SCOPED_TIMED_BLOCK(note) \
-    do { \
-        char *timed_note = note; \
-        clock_t timed_block_begin = clock()
-#define END_SCOPED_TIMED_BLOCK() \
-        clock_t timed_block_end = clock(); \
-        double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
-        printf("%.4fms (%s)\n", timed_block_elapsed, timed_note); \
-    } while (0)
-#define BEGIN_TIMED_BLOCK(note) \
-        char *timed_note = note; \
-        clock_t timed_block_begin = clock()
-#define END_TIMED_BLOCK() \
-        clock_t timed_block_end = clock(); \
-        double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
-        printf("%.4fms (%s)\n", timed_block_elapsed, timed_note)
-#else
-#define BEGIN_SCOPED_TIMED_BLOCK(note)
-#define END_SCOPED_TIMED_BLOCK()
-#define BEGIN_TIMED_BLOCK(note)
-#define END_TIMED_BLOCK()
-#endif
 
 #define SKHD_CONFIG_FILE ".skhdrc"
 
@@ -140,9 +117,10 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "Vvc:k:t:";
+    const char *short_option = "VPvc:k:t:";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
+        { "profile", no_argument, NULL, 'P' },
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
         { "key", required_argument, NULL, 'k' },
@@ -154,6 +132,9 @@ parse_arguments(int argc, char **argv)
         switch (option) {
         case 'V': {
             verbose = true;
+        } break;
+        case 'P': {
+            profile = true;
         } break;
         case 'v': {
             printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
@@ -214,12 +195,12 @@ use_default_config_path(void)
 
 int main(int argc, char **argv)
 {
-    BEGIN_TIMED_BLOCK("startup");
-    BEGIN_SCOPED_TIMED_BLOCK("initialization");
     if (parse_arguments(argc, argv)) {
         return EXIT_SUCCESS;
     }
 
+    BEGIN_SCOPED_TIMED_BLOCK("total_time");
+    BEGIN_SCOPED_TIMED_BLOCK("init");
     if (getuid() == 0 || geteuid() == 0) {
         error("skhd: running as root is not allowed! abort..\n");
     }
@@ -274,7 +255,7 @@ int main(int argc, char **argv)
         warn("skhd: could not watch '%s'\n", config_file);
     }
     END_SCOPED_TIMED_BLOCK();
-    END_TIMED_BLOCK();
+    END_SCOPED_TIMED_BLOCK();
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
