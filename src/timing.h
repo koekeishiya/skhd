@@ -18,7 +18,10 @@
 #define END_TIMED_BLOCK() \
     if (profile) end_timing(&timing)
 
-static bool profile;
+#define internal static
+#define global   static
+
+global bool profile;
 
 struct timing_info
 {
@@ -31,21 +34,21 @@ struct timing_info
 void begin_timing(struct timing_info *timing, char *note);
 void end_timing(struct timing_info *timing);
 
-static inline uint64_t
+internal inline uint64_t
 macos_get_wall_clock(void)
 {
     uint64_t result = AudioConvertHostTimeToNanos(AudioGetCurrentHostTime());
     return result;
 }
 
-static inline float
+internal inline float
 macos_get_seconds_elapsed(uint64_t start, uint64_t end)
 {
     float result = ((float)(end - start) / 1000.0f) / 1000000.0f;
     return result;
 }
 
-static inline float
+internal inline float
 macos_get_milliseconds_elapsed(uint64_t start, uint64_t end)
 {
     float result = 1000.0f * macos_get_seconds_elapsed(start, end);
@@ -66,5 +69,8 @@ void end_timing(struct timing_info *timing) {
         printf("%6.4fms\n", timing->ms);
     }
 }
+
+#undef internal
+#undef global
 
 #endif

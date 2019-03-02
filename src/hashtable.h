@@ -33,7 +33,9 @@ void *table_reset(struct table *table, int *count);
 #include <stdlib.h>
 #include <string.h>
 
-static struct bucket *
+#define internal static
+
+internal struct bucket *
 table_new_bucket(void *key, void *value)
 {
     struct bucket *bucket = malloc(sizeof(struct bucket));
@@ -43,7 +45,7 @@ table_new_bucket(void *key, void *value)
     return bucket;
 }
 
-static struct bucket **
+internal struct bucket **
 table_get_bucket(struct table *table, void *key)
 {
     struct bucket **bucket = table->buckets + (table->hash(key) % table->capacity);
@@ -55,6 +57,8 @@ table_get_bucket(struct table *table, void *key)
     }
     return bucket;
 }
+
+#undef internal
 
 void table_init(struct table *table, int capacity, table_hash_func hash, table_compare_func compare)
 {

@@ -4,8 +4,9 @@
 #include <IOKit/hidsystem/ev_keymap.h>
 
 #define internal static
+#define global   static
 
-internal struct table keymap_table;
+global struct table keymap_table;
 
 internal char *
 copy_cfstring(CFStringRef string)

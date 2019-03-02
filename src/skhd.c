@@ -31,22 +31,24 @@
 #include "hotkey.c"
 #include "synthesize.c"
 
-#define internal static
 extern bool CGSIsSecureEventInputSet();
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
+#define internal static
+#define global   static
+
 #define SKHD_CONFIG_FILE ".skhdrc"
 
-internal unsigned major_version = 0;
-internal unsigned minor_version = 3;
-internal unsigned patch_version = 1;
+global unsigned major_version = 0;
+global unsigned minor_version = 3;
+global unsigned patch_version = 1;
 
-internal struct carbon_event carbon;
-internal struct event_tap event_tap;
-internal struct hotloader hotloader;
-internal struct mode *current_mode;
-internal struct table mode_map;
-internal char *config_file;
+global struct carbon_event carbon;
+global struct event_tap event_tap;
+global struct hotloader hotloader;
+global struct mode *current_mode;
+global struct table mode_map;
+global char *config_file;
 
 internal void
 parse_config_helper(char *absolutepath)

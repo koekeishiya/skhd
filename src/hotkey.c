@@ -1,6 +1,7 @@
 #include "hotkey.h"
 
 #define internal static
+#define global   static
 
 #define HOTKEY_FOUND           ((1) << 0)
 #define MODE_CAPTURE(a)        ((a) << 1)
@@ -13,8 +14,8 @@
 #define LMOD_OFFS   1
 #define RMOD_OFFS   2
 
-internal char arg[] = "-c";
-internal char *shell = NULL;
+global char arg[] = "-c";
+global char *shell = NULL;
 
 internal uint32_t cgevent_lrmod_flag[] =
 {

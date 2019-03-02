@@ -1,9 +1,12 @@
 #ifndef SKHD_LOG_H
 #define SKHD_LOG_H
 
-static bool verbose;
+#define internal static
+#define global   static
 
-static inline void
+global bool verbose;
+
+internal inline void
 debug(const char *format, ...)
 {
     if (!verbose) return;
@@ -14,7 +17,7 @@ debug(const char *format, ...)
     va_end(args);
 }
 
-static inline void
+internal inline void
 warn(const char *format, ...)
 {
     va_list args;
@@ -23,7 +26,7 @@ warn(const char *format, ...)
     va_end(args);
 }
 
-static inline void
+internal inline void
 error(const char *format, ...)
 {
     va_list args;
@@ -32,5 +35,8 @@ error(const char *format, ...)
     va_end(args);
     exit(EXIT_FAILURE);
 }
+
+#undef internal
+#undef global
 
 #endif
