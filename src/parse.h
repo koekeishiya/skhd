@@ -4,18 +4,26 @@
 #include "tokenize.h"
 #include <stdbool.h>
 
+struct load_directive
+{
+    char *file;
+    struct token option;
+};
+
 struct table;
 struct parser
 {
+    char *file;
     struct token previous_token;
     struct token current_token;
     struct tokenizer tokenizer;
     struct table *mode_map;
     struct table *blacklst;
+    struct load_directive *load_directives;
     bool error;
 };
 
-void parse_config(struct parser *parser);
+bool parse_config(struct parser *parser);
 struct hotkey *parse_keypress(struct parser *parser);
 
 struct token parser_peek(struct parser *parser);

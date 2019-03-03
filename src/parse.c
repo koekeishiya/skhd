@@ -402,6 +402,32 @@ void parse_option_blacklist(struct parser *parser)
     }
 }
 
+void parse_option_load(struct parser *parser, struct token option)
+{
+    struct token filename_token = parser_previous(parser);
+    char *filename = copy_string_count(filename_token.text, filename_token.length);
+    debug("\t%s\n", filename);
+
+    if (*filename != '/') {
+        char *directory = file_directory(parser->file);
+
+        size_t directory_length = strlen(directory);
+        size_t filename_length  = strlen(filename);
+        size_t total_length     = directory_length + filename_length + 2;
+
+        char *absolutepath = malloc(total_length * sizeof(char));
+        snprintf(absolutepath, total_length, "%s/%s", directory, filename);
+        free(filename);
+
+        filename = absolutepath;
+    }
+
+    buf_push(parser->load_directives, ((struct load_directive) {
+        .file  = filename,
+        .option = option
+    }));
+}
+
 void parse_option(struct parser *parser)
 {
     parser_match(parser, Token_Option);
@@ -414,22 +440,26 @@ void parse_option(struct parser *parser)
         } else {
             parser_report_error(parser, option, "expected '[' followed by list of process names\n");
         }
+    } else if (token_equals(option, "load")) {
+        if (parser_match(parser, Token_String)) {
+            debug("load :: #%d {\n", option.line);
+            parse_option_load(parser, option);
+            debug("}\n");
+        } else {
+            parser_report_error(parser, option, "expected filename\n");
+        }
     } else {
         parser_report_error(parser, option, "invalid option specified\n");
     }
 }
 
-void parse_config(struct parser *parser)
+bool parse_config(struct parser *parser)
 {
     struct mode *mode;
     struct hotkey *hotkey;
 
     while (!parser_eof(parser)) {
-        if (parser->error) {
-            free_mode_map(parser->mode_map);
-            free_blacklist(parser->blacklst);
-            return;
-        }
+        if (parser->error) break;
 
         if ((parser_check(parser, Token_Identifier)) ||
             (parser_check(parser, Token_Modifier)) ||
@@ -450,6 +480,14 @@ void parse_config(struct parser *parser)
             parser_report_error(parser, parser_peek(parser), "expected decl, modifier or key-literal\n");
         }
     }
+
+    if (parser->error) {
+        free_mode_map(parser->mode_map);
+        free_blacklist(parser->blacklst);
+        return false;
+    }
+
+    return true;
 }
 
 struct hotkey *
@@ -550,11 +588,43 @@ void parser_report_error(struct parser *parser, struct token token, const char *
     parser->error = true;
 }
 
+void parser_do_directives(struct parser *parser, struct hotloader *hotloader)
+{
+    bool error = false;
+
+    for (int i = 0; i < buf_len(parser->load_directives); ++i) {
+        struct load_directive load = parser->load_directives[i];
+
+        struct parser directive_parser;
+        if (parser_init(&directive_parser, parser->mode_map, parser->blacklst, load.file)) {
+            hotloader_add_file(hotloader, load.file);
+
+            if (parse_config(&directive_parser)) {
+                parser_do_directives(&directive_parser, hotloader);
+            } else {
+                error = true;
+            }
+            parser_destroy(&directive_parser);
+        } else {
+            warn("skhd: could not open file '%s' from load directive #%d:%d\n", load.file, load.option.line, load.option.cursor);
+        }
+
+        free(load.file);
+    }
+    buf_free(parser->load_directives);
+
+    if (error) {
+        free_mode_map(parser->mode_map);
+        free_blacklist(parser->blacklst);
+    }
+}
+
 bool parser_init(struct parser *parser, struct table *mode_map, struct table *blacklst, char *file)
 {
     memset(parser, 0, sizeof(struct parser));
     char *buffer = read_file(file);
     if (buffer) {
+        parser->file     = file;
         parser->mode_map = mode_map;
         parser->blacklst = blacklst;
         tokenizer_init(&parser->tokenizer, buffer);

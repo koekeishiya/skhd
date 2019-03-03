@@ -51,16 +51,33 @@ global struct table mode_map;
 global struct table blacklst;
 global char *config_file;
 
+internal HOTLOADER_CALLBACK(config_handler);
+
 internal void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
     if (parser_init(&parser, &mode_map, &blacklst, absolutepath)) {
-        parse_config(&parser);
+        hotloader_end(&hotloader);
+        hotloader_add_file(&hotloader, absolutepath);
+
+        if (parse_config(&parser)) {
+            parser_do_directives(&parser, &hotloader);
+        }
         parser_destroy(&parser);
+
+        if (hotloader_begin(&hotloader, config_handler)) {
+            debug("skhd: watching files for changes:\n", absolutepath);
+            for (int i = 0; i < hotloader.watch_count; ++i) {
+                debug("\t%s\n", hotloader.watch_list[i].file_info.absolutepath);
+            }
+        } else {
+            warn("skhd: could not start watcher.. hotloading is not enabled\n");
+        }
     } else {
         warn("skhd: could not open file '%s'\n", absolutepath);
     }
+
     current_mode = table_find(&mode_map, "default");
 }
 
@@ -70,7 +87,7 @@ internal HOTLOADER_CALLBACK(config_handler)
     debug("skhd: config-file has been modified.. reloading config\n");
     free_mode_map(&mode_map);
     free_blacklist(&blacklst);
-    parse_config_helper(absolutepath);
+    parse_config_helper(config_file);
     END_TIMED_BLOCK();
 }
 
@@ -253,15 +270,6 @@ int main(int argc, char **argv)
     BEGIN_SCOPED_TIMED_BLOCK("begin_eventtap");
     event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
     event_tap_begin(&event_tap, key_handler);
-    END_SCOPED_TIMED_BLOCK();
-
-    BEGIN_SCOPED_TIMED_BLOCK("begin_hotloader");
-    if (hotloader_add_file(&hotloader, config_file) &&
-        hotloader_begin(&hotloader, config_handler)) {
-        debug("skhd: watching '%s' for changes\n", config_file);
-    } else {
-        warn("skhd: could not watch '%s'\n", config_file);
-    }
     END_SCOPED_TIMED_BLOCK();
     END_SCOPED_TIMED_BLOCK();
 
