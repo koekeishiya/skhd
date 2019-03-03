@@ -74,7 +74,7 @@ unsigned long hash_hotkey(struct hotkey *a)
     return a->key;
 }
 
-bool same_mode(char *a, char *b)
+bool compare_string(char *a, char *b)
 {
     while (*a && *b && *a == *b) {
         ++a;
@@ -83,7 +83,7 @@ bool same_mode(char *a, char *b)
     return *a == '\0' && *b == '\0';
 }
 
-unsigned long hash_mode(char *key)
+unsigned long hash_string(char *key)
 {
     unsigned long hash = 0, high;
     while(*key) {
@@ -225,6 +225,16 @@ next:;
     if (mode_count) {
         free(modes);
         buf_free(freed_pointers);
+    }
+}
+
+void free_blacklist(struct table *blacklst)
+{
+    int count;
+    void **items = table_reset(blacklst, &count);
+    for (int index = 0; index < count; ++index) {
+        char *item = (char *) items[index];
+        free(item);
     }
 }
 

@@ -384,6 +384,41 @@ void parse_declaration(struct parser *parser)
     }
 }
 
+void parse_option_blacklist(struct parser *parser)
+{
+    if (parser_match(parser, Token_String)) {
+        struct token name_token = parser_previous(parser);
+        char *name = copy_string_count(name_token.text, name_token.length);
+        for (char *s = name; *s; ++s) *s = tolower(*s);
+        debug("\t%s\n", name);
+        table_add(parser->blacklst, name, name);
+        parse_option_blacklist(parser);
+    } else if (parser_match(parser, Token_EndList)) {
+        if (parser->blacklst->count == 0) {
+            parser_report_error(parser, parser_previous(parser), "list must contain at least one value\n");
+        }
+    } else {
+        parser_report_error(parser, parser_peek(parser), "expected process name or ']'\n");
+    }
+}
+
+void parse_option(struct parser *parser)
+{
+    parser_match(parser, Token_Option);
+    struct token option = parser_previous(parser);
+    if (token_equals(option, "blacklist")) {
+        if (parser_match(parser, Token_BeginList)) {
+            debug("blacklist :: #%d {\n", option.line);
+            parse_option_blacklist(parser);
+            debug("}\n");
+        } else {
+            parser_report_error(parser, option, "expected '[' followed by list of process names\n");
+        }
+    } else {
+        parser_report_error(parser, option, "invalid option specified\n");
+    }
+}
+
 void parse_config(struct parser *parser)
 {
     struct mode *mode;
@@ -392,6 +427,7 @@ void parse_config(struct parser *parser)
     while (!parser_eof(parser)) {
         if (parser->error) {
             free_mode_map(parser->mode_map);
+            free_blacklist(parser->blacklst);
             return;
         }
 
@@ -408,6 +444,8 @@ void parse_config(struct parser *parser)
             }
         } else if (parser_check(parser, Token_Decl)) {
             parse_declaration(parser);
+        } else if (parser_check(parser, Token_Option)) {
+            parse_option(parser);
         } else {
             parser_report_error(parser, parser_peek(parser), "expected decl, modifier or key-literal\n");
         }
@@ -512,12 +550,13 @@ void parser_report_error(struct parser *parser, struct token token, const char *
     parser->error = true;
 }
 
-bool parser_init(struct parser *parser, struct table *mode_map, char *file)
+bool parser_init(struct parser *parser, struct table *mode_map, struct table *blacklst, char *file)
 {
     memset(parser, 0, sizeof(struct parser));
     char *buffer = read_file(file);
     if (buffer) {
         parser->mode_map = mode_map;
+        parser->blacklst = blacklst;
         tokenizer_init(&parser->tokenizer, buffer);
         parser_advance(parser);
         return true;

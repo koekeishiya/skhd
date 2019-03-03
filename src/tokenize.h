@@ -56,6 +56,7 @@ enum token_type
     Token_Unbound,
     Token_Wildcard,
     Token_String,
+    Token_Option,
 
     Token_BeginList,
     Token_EndList,

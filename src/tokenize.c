@@ -79,6 +79,14 @@ eat_string(struct tokenizer *tokenizer)
     }
 }
 
+internal void
+eat_option(struct tokenizer *tokenizer)
+{
+    while (*tokenizer->at && !isspace(*tokenizer->at)) {
+        advance(tokenizer);
+    }
+}
+
 internal inline bool
 isidentifier(char c)
 {
@@ -150,6 +158,15 @@ get_token(struct tokenizer *tokenizer)
     case '*': { token.type = Token_Wildcard;    } break;
     case '[': { token.type = Token_BeginList;   } break;
     case ']': { token.type = Token_EndList;     } break;
+    case '.': {
+        token.text = tokenizer->at;
+        token.line = tokenizer->line;
+        token.cursor = tokenizer->cursor;
+
+        eat_option(tokenizer);
+        token.length = tokenizer->at - token.text;
+        token.type = Token_Option;
+    } break;
     case '"': {
         token.text = tokenizer->at;
         token.line = tokenizer->line;

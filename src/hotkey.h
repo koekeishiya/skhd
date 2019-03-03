@@ -100,8 +100,8 @@ clear_flags(struct hotkey *hotkey, uint32_t flag)
 
 #undef internal
 
-bool same_mode(char *a, char *b);
-unsigned long hash_mode(char *key);
+bool compare_string(char *a, char *b);
+unsigned long hash_string(char *key);
 
 bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
@@ -111,6 +111,7 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 
 bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon);
 void free_mode_map(struct table *mode_map);
+void free_blacklist(struct table *blacklst);
 
 void init_shell(void);
 

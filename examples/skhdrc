@@ -86,6 +86,14 @@
 #     "finder"      : false
 # ]
 
+# prevent skhd from monitoring events for specific applications
+#
+# .blacklist [
+#    "kitty"
+#    "terminal"
+#    "qutebrowser"
+# ]
+
 # open terminal, blazingly fast compared to iTerm/Hyper
 cmd - return : /Applications/Kitty.app/Contents/MacOS/kitty --single-instance -d ~
 

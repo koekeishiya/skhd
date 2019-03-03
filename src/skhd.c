@@ -48,13 +48,14 @@ global struct event_tap event_tap;
 global struct hotloader hotloader;
 global struct mode *current_mode;
 global struct table mode_map;
+global struct table blacklst;
 global char *config_file;
 
 internal void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
-    if (parser_init(&parser, &mode_map, absolutepath)) {
+    if (parser_init(&parser, &mode_map, &blacklst, absolutepath)) {
         parse_config(&parser);
         parser_destroy(&parser);
     } else {
@@ -68,6 +69,7 @@ internal HOTLOADER_CALLBACK(config_handler)
     BEGIN_TIMED_BLOCK("hotload_config");
     debug("skhd: config-file has been modified.. reloading config\n");
     free_mode_map(&mode_map);
+    free_blacklist(&blacklst);
     parse_config_helper(absolutepath);
     END_TIMED_BLOCK();
 }
@@ -78,6 +80,7 @@ internal CF_NOTIFICATION_CALLBACK(keymap_handler)
     if (initialize_keycode_map()) {
         debug("skhd: input source changed.. reloading config\n");
         free_mode_map(&mode_map);
+        free_blacklist(&blacklst);
         parse_config_helper(config_file);
     }
     END_TIMED_BLOCK();
@@ -93,6 +96,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
         CGEventTapEnable(event_tap->handle, 1);
     } break;
     case kCGEventKeyDown: {
+        if (table_find(&blacklst, carbon.process_name)) return event;
         if (!current_mode) return event;
 
         BEGIN_TIMED_BLOCK("handle_keypress");
@@ -103,6 +107,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
         if (result) return NULL;
     } break;
     case NX_SYSDEFINED: {
+        if (table_find(&blacklst, carbon.process_name)) return event;
         if (!current_mode) return event;
 
         struct hotkey eventkey;
@@ -236,7 +241,8 @@ int main(int argc, char **argv)
 
     signal(SIGCHLD, SIG_IGN);
     init_shell();
-    table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
+    table_init(&mode_map, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
+    table_init(&blacklst, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
     END_SCOPED_TIMED_BLOCK();
 
     BEGIN_SCOPED_TIMED_BLOCK("parse_config");
