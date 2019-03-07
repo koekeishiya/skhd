@@ -46,7 +46,7 @@ extern bool CGSIsSecureEventInputSet();
 
 global unsigned major_version = 0;
 global unsigned minor_version = 3;
-global unsigned patch_version = 1;
+global unsigned patch_version = 2;
 
 global struct carbon_event carbon;
 global struct event_tap event_tap;
