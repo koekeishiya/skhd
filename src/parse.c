@@ -588,7 +588,7 @@ void parser_report_error(struct parser *parser, struct token token, const char *
     parser->error = true;
 }
 
-void parser_do_directives(struct parser *parser, struct hotloader *hotloader)
+void parser_do_directives(struct parser *parser, struct hotloader *hotloader, bool thwart_hotloader)
 {
     bool error = false;
 
@@ -597,13 +597,16 @@ void parser_do_directives(struct parser *parser, struct hotloader *hotloader)
 
         struct parser directive_parser;
         if (parser_init(&directive_parser, parser->mode_map, parser->blacklst, load.file)) {
-            hotloader_add_file(hotloader, load.file);
+            if (!thwart_hotloader) {
+                hotloader_add_file(hotloader, load.file);
+            }
 
             if (parse_config(&directive_parser)) {
-                parser_do_directives(&directive_parser, hotloader);
+                parser_do_directives(&directive_parser, hotloader, thwart_hotloader);
             } else {
                 error = true;
             }
+
             parser_destroy(&directive_parser);
         } else {
             warn("skhd: could not open file '%s' from load directive #%d:%d\n", load.file, load.option.line, load.option.cursor);

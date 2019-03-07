@@ -5,6 +5,10 @@
 #include <getopt.h>
 #include <signal.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 #include <unistd.h>
 #include <Carbon/Carbon.h>
 
@@ -38,6 +42,7 @@ extern bool CGSIsSecureEventInputSet();
 #define global   static
 
 #define SKHD_CONFIG_FILE ".skhdrc"
+#define SKHD_PID_FILE    "/tmp/skhd.pid"
 
 global unsigned major_version = 0;
 global unsigned minor_version = 3;
@@ -49,6 +54,7 @@ global struct hotloader hotloader;
 global struct mode *current_mode;
 global struct table mode_map;
 global struct table blacklst;
+global bool thwart_hotloader;
 global char *config_file;
 
 internal HOTLOADER_CALLBACK(config_handler);
@@ -58,21 +64,25 @@ parse_config_helper(char *absolutepath)
 {
     struct parser parser;
     if (parser_init(&parser, &mode_map, &blacklst, absolutepath)) {
-        hotloader_end(&hotloader);
-        hotloader_add_file(&hotloader, absolutepath);
+        if (!thwart_hotloader) {
+            hotloader_end(&hotloader);
+            hotloader_add_file(&hotloader, absolutepath);
+        }
 
         if (parse_config(&parser)) {
-            parser_do_directives(&parser, &hotloader);
+            parser_do_directives(&parser, &hotloader, thwart_hotloader);
         }
         parser_destroy(&parser);
 
-        if (hotloader_begin(&hotloader, config_handler)) {
-            debug("skhd: watching files for changes:\n", absolutepath);
-            for (int i = 0; i < hotloader.watch_count; ++i) {
-                debug("\t%s\n", hotloader.watch_list[i].file_info.absolutepath);
+        if (!thwart_hotloader) {
+            if (hotloader_begin(&hotloader, config_handler)) {
+                debug("skhd: watching files for changes:\n", absolutepath);
+                for (int i = 0; i < hotloader.watch_count; ++i) {
+                    debug("\t%s\n", hotloader.watch_list[i].file_info.absolutepath);
+                }
+            } else {
+                warn("skhd: could not start watcher.. hotloading is not enabled\n");
             }
-        } else {
-            warn("skhd: could not start watcher.. hotloading is not enabled\n");
         }
     } else {
         warn("skhd: could not open file '%s'\n", absolutepath);
@@ -137,18 +147,73 @@ internal EVENT_TAP_CALLBACK(key_handler)
     return event;
 }
 
+internal void
+sigusr1_handler(int signal)
+{
+    BEGIN_TIMED_BLOCK("sigusr1");
+    debug("skhd: SIGUSR1 received.. reloading config\n");
+    free_mode_map(&mode_map);
+    free_blacklist(&blacklst);
+    parse_config_helper(config_file);
+    END_TIMED_BLOCK();
+}
+
+internal pid_t
+read_pid_file(void)
+{
+    pid_t pid = 0;
+
+    int handle = open(SKHD_PID_FILE, O_RDWR);
+    if (handle == -1) {
+        error("skhd: could not open pid-file..\n");
+    }
+
+    if (flock(handle, LOCK_EX | LOCK_NB) == 0) {
+        error("skhd: could not locate existing instance..\n");
+    } else if (read(handle, &pid, sizeof(pid_t)) == -1) {
+        error("skhd: could not read pid-file..\n");
+    }
+
+    close(handle);
+    return pid;
+}
+
+internal void
+create_pid_file(void)
+{
+    pid_t pid = getpid();
+
+    int handle = open(SKHD_PID_FILE, O_CREAT | O_WRONLY, 0644);
+    if (handle == -1) {
+        error("skhd: could not create pid-file! abort..\n");
+    }
+
+    if (flock(handle, LOCK_EX | LOCK_NB) == -1) {
+        error("skhd: could not lock pid-file! abort..\n");
+    } else if (write(handle, &pid, sizeof(pid_t)) == -1) {
+        error("skhd: could not write pid-file! abort..\n");
+    }
+
+    // NOTE(koekeishiya): we intentionally leave the handle open,
+    // as calling close(..) will release the lock we just acquired.
+
+    debug("skhd: successfully created pid-file..\n");
+}
+
 internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "VPvc:k:t:";
+    const char *short_option = "VPvc:k:t:rh";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
         { "profile", no_argument, NULL, 'P' },
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
+        { "no-hotload", no_argument, NULL, 'h' },
         { "key", required_argument, NULL, 'k' },
         { "text", required_argument, NULL, 't' },
+        { "reload", no_argument, NULL, 'r' },
         { NULL, 0, NULL, 0 }
     };
 
@@ -167,12 +232,20 @@ parse_arguments(int argc, char **argv)
         case 'c': {
             config_file = copy_string(optarg);
         } break;
+        case 'h': {
+            thwart_hotloader = true;
+        } break;
         case 'k': {
             synthesize_key(optarg);
             return true;
         } break;
         case 't': {
             synthesize_text(optarg);
+            return true;
+        } break;
+        case 'r': {
+            pid_t pid = read_pid_file();
+            if (pid) kill(pid, SIGUSR1);
             return true;
         } break;
         }
@@ -219,15 +292,17 @@ use_default_config_path(void)
 
 int main(int argc, char **argv)
 {
+    if (getuid() == 0 || geteuid() == 0) {
+        error("skhd: running as root is not allowed! abort..\n");
+    }
+
     if (parse_arguments(argc, argv)) {
         return EXIT_SUCCESS;
     }
 
     BEGIN_SCOPED_TIMED_BLOCK("total_time");
     BEGIN_SCOPED_TIMED_BLOCK("init");
-    if (getuid() == 0 || geteuid() == 0) {
-        error("skhd: running as root is not allowed! abort..\n");
-    }
+    create_pid_file();
 
     if (secure_keyboard_entry_enabled()) {
         error("skhd: secure keyboard entry is enabled! abort..\n");
@@ -257,6 +332,8 @@ int main(int argc, char **argv)
                                     CFNotificationSuspensionBehaviorCoalesce);
 
     signal(SIGCHLD, SIG_IGN);
+    signal(SIGUSR1, sigusr1_handler);
+
     init_shell();
     table_init(&mode_map, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
     table_init(&blacklst, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);

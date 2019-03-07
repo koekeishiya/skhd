@@ -56,6 +56,12 @@ Requires xcode-8 command-line tools.
 -c | --config: Specify location of config file
     skhd -c ~/.skhdrc
 
+-r | --reload: Signal a running instance of skhd to reload its config file
+    skhd -r
+
+-h | --no-hotload: Disable system for hotloading config file
+    skhd -h
+
 -k | --key: Synthesize a keypress (same syntax as when defining a hotkey)
     skhd -k "shift + alt - 7"
 
