@@ -4,6 +4,10 @@
 (although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
 **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
+**skhd** uses a pid-file to make sure that only one instance is running at any moment in time. This also allows for the ability to trigger
+a manual reload of the config file by invoking `skhd --reload` at any time while an instance of **skhd** is running. The pid-file is saved
+as `/tmp/skhd.pid` and so the user that is running **skhd** must have write permission to said path.
+
 feature comparison between **skhd** and **khd**
 
 | feature                    | skhd | khd |
