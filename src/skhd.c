@@ -35,7 +35,8 @@
 #include "hotkey.c"
 #include "synthesize.c"
 
-extern bool CGSIsSecureEventInputSet();
+extern CFDictionaryRef CGSCopyCurrentSessionDictionary(void);
+extern bool CGSIsSecureEventInputSet(void);
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
 #define internal static
@@ -290,6 +291,31 @@ use_default_config_path(void)
     config_file[length] = '\0';
 }
 
+internal void
+dump_secure_keyboard_entry_process_info(void)
+{
+    CFDictionaryRef session;
+    CFNumberRef pid_ref;
+    char *process_name;
+    pid_t pid;
+
+    session = CGSCopyCurrentSessionDictionary();
+    if (!session) goto err;
+
+    pid_ref = (CFNumberRef) CFDictionaryGetValue(session, CFSTR("kCGSSessionSecureInputPID"));
+    if (!pid_ref) goto err;
+
+    CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), &pid);
+    process_name = find_process_name_for_pid(pid);
+
+    if (process_name) {
+        error("skhd: secure keyboard entry is enabled by (%lld) '%s'! abort..\n", pid, process_name);
+    }
+
+err:
+    error("skhd: secure keyboard entry is enabled! abort..\n");
+}
+
 int main(int argc, char **argv)
 {
     if (getuid() == 0 || geteuid() == 0) {
@@ -305,7 +331,7 @@ int main(int argc, char **argv)
     create_pid_file();
 
     if (secure_keyboard_entry_enabled()) {
-        error("skhd: secure keyboard entry is enabled! abort..\n");
+        dump_secure_keyboard_entry_process_info();
     }
 
     if (!check_privileges()) {

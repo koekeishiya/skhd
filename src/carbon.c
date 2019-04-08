@@ -17,6 +17,14 @@ find_process_name_for_psn(ProcessSerialNumber *psn)
     return NULL;
 }
 
+inline char *
+find_process_name_for_pid(pid_t pid)
+{
+    ProcessSerialNumber psn;
+    GetProcessForPID(pid, &psn);
+    return find_process_name_for_psn(&psn);
+}
+
 internal inline char *
 find_active_process_name(void)
 {
