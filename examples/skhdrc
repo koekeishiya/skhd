@@ -76,7 +76,9 @@
 # launch a new terminal instance when in either 'default' or 'test' mode
 # default, test < cmd - return : open -na /Applications/Terminal.app
 
-# application specific bindings
+# application-specific bindings
+# to send a command directly to the application, supply a tilde ('~') in place
+# of the command.
 #
 # cmd - n [
 #     "kitty"       : echo "hello kitty"
