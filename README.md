@@ -60,6 +60,9 @@ Requires xcode-8 command-line tools.
 -c | --config: Specify location of config file
     skhd -c ~/.skhdrc
 
+-o | --observe: Output keycode and modifiers of event. Ctrl+C to quit
+    skhd -o
+
 -r | --reload: Signal a running instance of skhd to reload its config file
     skhd -r
 

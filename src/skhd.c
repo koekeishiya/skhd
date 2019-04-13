@@ -114,6 +114,36 @@ internal CF_NOTIFICATION_CALLBACK(keymap_handler)
     END_TIMED_BLOCK();
 }
 
+internal EVENT_TAP_CALLBACK(key_observer_handler)
+{
+    switch (type) {
+    case kCGEventTapDisabledByTimeout:
+    case kCGEventTapDisabledByUserInput: {
+        debug("skhd: restarting event-tap\n");
+        struct event_tap *event_tap = (struct event_tap *) reference;
+        CGEventTapEnable(event_tap->handle, 1);
+    } break;
+    case kCGEventKeyDown:
+    case kCGEventFlagsChanged: {
+        uint32_t flags = CGEventGetFlags(event);
+        uint32_t keycode = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
+
+        if (keycode == kVK_ANSI_C && flags & 0x40000) {
+            exit(0);
+        }
+
+        printf("\rkeycode: 0x%.2X\tflags: ", keycode);
+        for (int i = 31; i >= 0; --i) {
+            printf("%c", (flags & (1 << i)) ? '1' : '0');
+        }
+        fflush(stdout);
+
+        return NULL;
+    } break;
+    }
+    return event;
+}
+
 internal EVENT_TAP_CALLBACK(key_handler)
 {
     switch (type) {
@@ -205,7 +235,7 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "VPvc:k:t:rh";
+    const char *short_option = "VPvc:k:t:rho";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
         { "profile", no_argument, NULL, 'P' },
@@ -215,6 +245,7 @@ parse_arguments(int argc, char **argv)
         { "key", required_argument, NULL, 'k' },
         { "text", required_argument, NULL, 't' },
         { "reload", no_argument, NULL, 'r' },
+        { "observe", no_argument, NULL, 'o' },
         { NULL, 0, NULL, 0 }
     };
 
@@ -248,6 +279,12 @@ parse_arguments(int argc, char **argv)
             pid_t pid = read_pid_file();
             if (pid) kill(pid, SIGUSR1);
             return true;
+        } break;
+        case 'o': {
+            event_tap.mask = (1 << kCGEventKeyDown) |
+                             (1 << kCGEventFlagsChanged);
+            event_tap_begin(&event_tap, key_observer_handler);
+            CFRunLoopRun();
         } break;
         }
     }
