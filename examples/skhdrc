@@ -41,6 +41,10 @@
 #
 #                       ->           = keypress is not consumed by skhd
 #
+#                       *            = matches every application not specified in <proc_map_lst>
+#
+#                       ~            = application is unbound and keypress is forwarded per usual, when specified in a <proc_map>
+#
 #  NOTE(koekeishiya): A mode is declared according to the following rules:
 #
 #                       mode_decl = '::' <name> '@' ':' <command> | '::' <name> ':' <command> |
@@ -169,19 +173,10 @@ cmd + alt - 3 : chunkc tiling::desktop --focus 3
 cmd + alt - 4 : chunkc tiling::desktop --focus 4
 cmd + alt - 5 : chunkc tiling::desktop --focus 5
 cmd + alt - 6 : chunkc tiling::desktop --focus 6
-# cmd + alt - 7 : chunkc tiling::desktop --focus 7
-
-# send window to desktop
-shift + alt - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop)
-shift + alt - z : chunkc tiling::window --send-to-desktop prev
-shift + alt - c : chunkc tiling::window --send-to-desktop next
-shift + alt - 1 : chunkc tiling::window --send-to-desktop 1
-shift + alt - 2 : chunkc tiling::window --send-to-desktop 2
-shift + alt - 3 : chunkc tiling::window --send-to-desktop 3
-shift + alt - 4 : chunkc tiling::window --send-to-desktop 4
-shift + alt - 5 : chunkc tiling::window --send-to-desktop 5
-shift + alt - 6 : chunkc tiling::window --send-to-desktop 6
-# shift + alt - 7 : chunkc tiling::window --send-to-desktop 7
+cmd + alt - 7 : chunkc tiling::desktop --focus 7
+cmd + alt - 8 : chunkc tiling::desktop --focus 8
+cmd + alt - 9 : chunkc tiling::desktop --focus 9
+cmd + alt - 0 : chunkc tiling::desktop --focus 10
 
 # send window to desktop and follow focus
 shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
@@ -193,7 +188,10 @@ shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; chunkc tiling::desk
 shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; chunkc tiling::desktop --focus 4
 shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; chunkc tiling::desktop --focus 5
 shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; chunkc tiling::desktop --focus 6
-# shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
+shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
+shift + cmd - 8 : chunkc tiling::window --send-to-desktop 8; chunkc tiling::desktop --focus 8
+shift + cmd - 9 : chunkc tiling::window --send-to-desktop 9; chunkc tiling::desktop --focus 9
+shift + cmd - 0 : chunkc tiling::window --send-to-desktop 10; chunkc tiling::desktop --focus 10
 
 # focus monitor
 ctrl + alt - z  : chunkc tiling::monitor -f prev
