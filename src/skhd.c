@@ -43,7 +43,7 @@ extern bool CGSIsSecureEventInputSet(void);
 #define global   static
 
 #define SKHD_CONFIG_FILE ".skhdrc"
-#define SKHD_PID_FILE    "/tmp/skhd.pid"
+#define SKHD_PIDFILE_FMT "/tmp/skhd_%s.pid"
 
 global unsigned major_version = 0;
 global unsigned minor_version = 3;
@@ -192,9 +192,17 @@ sigusr1_handler(int signal)
 internal pid_t
 read_pid_file(void)
 {
+    char pid_file[255] = {};
     pid_t pid = 0;
 
-    int handle = open(SKHD_PID_FILE, O_RDWR);
+    char *user = getenv("USER");
+    if (user) {
+        snprintf(pid_file, sizeof(pid_file), SKHD_PIDFILE_FMT, user);
+    } else {
+        error("skhd: could not create path to pid-file because 'env USER' was not set! abort..\n");
+    }
+
+    int handle = open(pid_file, O_RDWR);
     if (handle == -1) {
         error("skhd: could not open pid-file..\n");
     }
@@ -212,9 +220,17 @@ read_pid_file(void)
 internal void
 create_pid_file(void)
 {
+    char pid_file[255] = {};
     pid_t pid = getpid();
 
-    int handle = open(SKHD_PID_FILE, O_CREAT | O_WRONLY, 0644);
+    char *user = getenv("USER");
+    if (user) {
+        snprintf(pid_file, sizeof(pid_file), SKHD_PIDFILE_FMT, user);
+    } else {
+        error("skhd: could not create path to pid-file because 'env USER' was not set! abort..\n");
+    }
+
+    int handle = open(pid_file, O_CREAT | O_WRONLY, 0644);
     if (handle == -1) {
         error("skhd: could not create pid-file! abort..\n");
     }
