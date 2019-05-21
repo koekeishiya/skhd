@@ -230,13 +230,21 @@ create_pid_file(void)
         error("skhd: could not create path to pid-file because 'env USER' was not set! abort..\n");
     }
 
-    int handle = open(pid_file, O_CREAT | O_WRONLY, 0644);
+    int handle = open(pid_file, O_CREAT | O_RDWR, 0644);
     if (handle == -1) {
         error("skhd: could not create pid-file! abort..\n");
     }
 
-    if (flock(handle, LOCK_EX | LOCK_NB) == -1) {
-        error("skhd: could not lock pid-file! abort..\n");
+    struct flock lockfd = {
+        .l_start  = 0,
+        .l_len    = 0,
+        .l_pid    = pid,
+        .l_type   = F_WRLCK,
+        .l_whence = SEEK_SET
+    };
+
+    if (fcntl(handle, F_SETLK, &lockfd) == -1) {
+        error("skhd: could not lock pid-file! abort.. %d\n", errno);
     } else if (write(handle, &pid, sizeof(pid_t)) == -1) {
         error("skhd: could not write pid-file! abort..\n");
     }
