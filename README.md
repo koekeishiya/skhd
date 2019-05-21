@@ -6,7 +6,7 @@
 
 **skhd** uses a pid-file to make sure that only one instance is running at any moment in time. This also allows for the ability to trigger
 a manual reload of the config file by invoking `skhd --reload` at any time while an instance of **skhd** is running. The pid-file is saved
-as `/tmp/skhd.pid` and so the user that is running **skhd** must have write permission to said path.
+as `/tmp/skhd_%USER.pid` and so the user that is running **skhd** must have write permission to said path.
 
 feature comparison between **skhd** and **khd**
 
