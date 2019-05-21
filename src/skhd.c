@@ -244,7 +244,7 @@ create_pid_file(void)
     };
 
     if (fcntl(handle, F_SETLK, &lockfd) == -1) {
-        error("skhd: could not lock pid-file! abort.. %d\n", errno);
+        error("skhd: could not lock pid-file! abort..\n");
     } else if (write(handle, &pid, sizeof(pid_t)) == -1) {
         error("skhd: could not write pid-file! abort..\n");
     }
