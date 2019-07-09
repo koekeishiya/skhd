@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define Modifier_Keycode_Alt     0x3A
+#define Modifier_Keycode_Shift   0x38
+#define Modifier_Keycode_Cmd     0x37
+#define Modifier_Keycode_Ctrl    0x3B
+#define Modifier_Keycode_Fn      0x3F
+
 enum osx_event_mask
 {
     Event_Mask_Alt      = 0x00080000,
@@ -43,15 +49,18 @@ enum hotkey_flag
     Hotkey_Flag_Hyper       = (Hotkey_Flag_Cmd |
                                Hotkey_Flag_Alt |
                                Hotkey_Flag_Shift |
-                               Hotkey_Flag_Control)
+                               Hotkey_Flag_Control),
+    Hotkey_Flag_Meh         = (Hotkey_Flag_Control |
+                               Hotkey_Flag_Shift |
+                               Hotkey_Flag_Alt)
 };
 
 #include "hashtable.h"
 
+struct carbon_event;
+
 struct mode
 {
-    int line;
-    int cursor;
     char *name;
     char *command;
     bool capture;
@@ -62,45 +71,48 @@ struct hotkey
 {
     uint32_t flags;
     uint32_t key;
-    char *command;
+    char **process_name;
+    char **command;
+    char *wildcard_command;
     struct mode **mode_list;
 };
 
-struct systemkey
-{
-    struct hotkey eventkey;
-    bool intercept;
-};
+#define internal static
 
-static inline void
+internal inline void
 add_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags |= flag;
 }
 
-static inline bool
+internal inline bool
 has_flags(struct hotkey *hotkey, uint32_t flag)
 {
     bool result = hotkey->flags & flag;
     return result;
 }
 
-static inline void
+internal inline void
 clear_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags &= ~flag;
 }
 
-bool same_mode(char *a, char *b);
-unsigned long hash_mode(char *key);
+#undef internal
+
+bool compare_string(char *a, char *b);
+unsigned long hash_string(char *key);
 
 bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
 
 struct hotkey create_eventkey(CGEventRef event);
-struct systemkey create_systemkey(CGEventRef event);
+bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 
-bool find_and_exec_hotkey(struct hotkey *eventkey, struct table *mode_map, struct mode **current_mode);
+bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon);
 void free_mode_map(struct table *mode_map);
+void free_blacklist(struct table *blacklst);
+
+void init_shell(void);
 
 #endif

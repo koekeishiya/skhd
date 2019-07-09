@@ -3,36 +3,47 @@
 #
 #                     A hotkey is written according to the following rules:
 #
-#                       hotkey   = <mode> '<' <action> | <action>
+#                       hotkey       = <mode> '<' <action> | <action>
 #
-#                       mode     = 'name of mode' | <mode> ',' <mode>
+#                       mode         = 'name of mode' | <mode> ',' <mode>
 #
-#                       action   = <keysym> ':' <command> | <keysym> '->' ':' <command>
-#                                  <keysym> ';' <mode>    | <keysym> '->' ';' <mode>
+#                       action       = <keysym> '[' <proc_map_lst> ']' | <keysym> '->' '[' <proc_map_lst> ']'
+#                                      <keysym> ':' <command>          | <keysym> '->' ':' <command>
+#                                      <keysym> ';' <mode>             | <keysym> '->' ';' <mode>
 #
-#                       keysym   = <mod> '-' <key> | <key>
+#                       keysym       = <mod> '-' <key> | <key>
 #
-#                       mod      = 'built-in mod keyword' | <mod> '+' <mod>
+#                       mod          = 'modifier keyword' | <mod> '+' <mod>
 #
-#                       key      = <literal> | <keycode>
+#                       key          = <literal> | <keycode>
 #
-#                       literal  = 'single letter or built-in keyword'
+#                       literal      = 'single letter or built-in keyword'
 #
-#                       keycode  = 'apple keyboard kVK_<Key> values (0x3C)'
+#                       keycode      = 'apple keyboard kVK_<Key> values (0x3C)'
 #
-#                       ->       = keypress is not consumed by skhd
+#                       proc_map_lst = * <proc_map>
 #
-#                       command  = command is executed through '$SHELL -c' and
-#                                  follows valid shell syntax. if the $SHELL environment
-#                                  variable is not set, it will default to '/bin/bash'.
-#                                  when bash is used, the ';' delimeter can be specified
-#                                  to chain commands.
+#                       proc_map     = <string> ':' <command> | <string>     '~' |
+#                                      '*'      ':' <command> | '*'          '~'
 #
-#                                  to allow a command to extend into multiple lines,
-#                                  prepend '\' at the end of the previous line.
+#                       string       = '"' 'sequence of characters' '"'
 #
-#                                  an EOL character signifies the end of the bind.
+#                       command      = command is executed through '$SHELL -c' and
+#                                      follows valid shell syntax. if the $SHELL environment
+#                                      variable is not set, it will default to '/bin/bash'.
+#                                      when bash is used, the ';' delimeter can be specified
+#                                      to chain commands.
 #
+#                                      to allow a command to extend into multiple lines,
+#                                      prepend '\' at the end of the previous line.
+#
+#                                      an EOL character signifies the end of the bind.
+#
+#                       ->           = keypress is not consumed by skhd
+#
+#                       *            = matches every application not specified in <proc_map_lst>
+#
+#                       ~            = application is unbound and keypress is forwarded per usual, when specified in a <proc_map>
 #
 #  NOTE(koekeishiya): A mode is declared according to the following rules:
 #
@@ -43,16 +54,16 @@
 #
 #                       @         = capture keypresses regardless of being bound to an action
 #
-#                       command  = command is executed through '$SHELL -c' and
-#                                  follows valid shell syntax. if the $SHELL environment
-#                                  variable is not set, it will default to '/bin/bash'.
-#                                  when bash is used, the ';' delimeter can be specified
-#                                  to chain commands.
+#                       command   = command is executed through '$SHELL -c' and
+#                                   follows valid shell syntax. if the $SHELL environment
+#                                   variable is not set, it will default to '/bin/bash'.
+#                                   when bash is used, the ';' delimeter can be specified
+#                                   to chain commands.
 #
-#                                  to allow a command to extend into multiple lines,
-#                                  prepend '\' at the end of the previous line.
+#                                   to allow a command to extend into multiple lines,
+#                                   prepend '\' at the end of the previous line.
 #
-#                                  an EOL character signifies the end of the bind.
+#                                   an EOL character signifies the end of the bind.
 
 # add an on_enter command to the default mode
 # :: default : chunkc border::color 0xff775759
@@ -69,11 +80,39 @@
 # launch a new terminal instance when in either 'default' or 'test' mode
 # default, test < cmd - return : open -na /Applications/Terminal.app
 
+# application specific bindings
+#
+# cmd - n [
+#     "kitty"       : echo "hello kitty"
+#     *             : echo "hello everyone"
+#     "qutebrowser" : echo "hello qutebrowser"
+#     "terminal"    ~
+#     "finder"      : false
+# ]
+
+# specify a file that should be included as an additional config-file.
+# treated as an absolutepath if the filename begins with '/' otherwise
+# the file is relative to the path of the config-file it was loaded from.
+#
+# .load "/Users/Koe/.config/partial_skhdrc"
+# .load "partial_skhdrc"
+
+# prevent skhd from monitoring events for specific applications.
+#
+# .blacklist [
+#    "kitty"
+#    "terminal"
+#    "qutebrowser"
+# ]
+
 # open terminal, blazingly fast compared to iTerm/Hyper
-cmd - return : open -na /Applications/Kitty.app
+cmd - return : /Applications/Kitty.app/Contents/MacOS/kitty --single-instance -d ~
 
 # open qutebrowser
 cmd + shift - return : ~/Scripts/qtb.sh
+
+# open mpv
+cmd - m : open -na /Applications/mpv.app $(pbpaste)
 
 # close focused window
 alt - w : chunkc tiling::window --close
@@ -111,27 +150,48 @@ shift + alt - left   : chunkc tiling::window --grid-layout 1:2:0:0:1:1
 # make floating window fill right-half of screen
 shift + alt - right  : chunkc tiling::window --grid-layout 1:2:1:0:1:1
 
-# send window to desktop
-shift + alt - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop)
-shift + alt - z : chunkc tiling::window --send-to-desktop prev
-shift + alt - c : chunkc tiling::window --send-to-desktop next
-shift + alt - 1 : chunkc tiling::window --send-to-desktop 1
-shift + alt - 2 : chunkc tiling::window --send-to-desktop 2
-shift + alt - 3 : chunkc tiling::window --send-to-desktop 3
-shift + alt - 4 : chunkc tiling::window --send-to-desktop 4
-shift + alt - 5 : chunkc tiling::window --send-to-desktop 5
-shift + alt - 6 : chunkc tiling::window --send-to-desktop 6
+# create desktop, move window and follow focus
+shift + cmd - n : chunkc tiling::desktop --create;\
+                  id=$(chunkc tiling::query --desktops-for-monitor $(chunkc tiling::query --monitor-for-desktop $(chunkc tiling::query --desktop id)));\
+                  chunkc tiling::window --send-to-desktop $(echo ${id##* });\
+                  chunkc tiling::desktop --focus $(echo ${id##* })
+
+# create desktop and follow focus
+cmd + alt - n : chunkc tiling::desktop --create;\
+                id=$(chunkc tiling::query --desktops-for-monitor $(chunkc tiling::query --monitor-for-desktop $(chunkc tiling::query --desktop id)));\
+                chunkc tiling::desktop --focus $(echo ${id##* })
+# destroy desktop
+cmd + alt - w : chunkc tiling::desktop --annihilate
+
+# fast focus desktop
+cmd + alt - x : chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
+cmd + alt - z : chunkc tiling::desktop --focus prev
+cmd + alt - c : chunkc tiling::desktop --focus next
+cmd + alt - 1 : chunkc tiling::desktop --focus 1
+cmd + alt - 2 : chunkc tiling::desktop --focus 2
+cmd + alt - 3 : chunkc tiling::desktop --focus 3
+cmd + alt - 4 : chunkc tiling::desktop --focus 4
+cmd + alt - 5 : chunkc tiling::desktop --focus 5
+cmd + alt - 6 : chunkc tiling::desktop --focus 6
+cmd + alt - 7 : chunkc tiling::desktop --focus 7
+cmd + alt - 8 : chunkc tiling::desktop --focus 8
+cmd + alt - 9 : chunkc tiling::desktop --focus 9
+cmd + alt - 0 : chunkc tiling::desktop --focus 10
 
 # send window to desktop and follow focus
-shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); qes -k "cmd + alt - $(chunkc get _last_active_desktop)"
-shift + cmd - z : chunkc tiling::window --send-to-desktop prev; qes -k "cmd + alt - z"
-shift + cmd - c : chunkc tiling::window --send-to-desktop next; qes -k "cmd + alt - c"
-shift + cmd - 1 : chunkc tiling::window --send-to-desktop 1; qes -k "cmd + alt - 1"
-shift + cmd - 2 : chunkc tiling::window --send-to-desktop 2; qes -k "cmd + alt - 2"
-shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; qes -k "cmd + alt - 3"
-shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; qes -k "cmd + alt - 4"
-shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; qes -k "cmd + alt - 5"
-shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; qes -k "cmd + alt - 6"
+shift + cmd - x : chunkc tiling::window --send-to-desktop $(chunkc get _last_active_desktop); chunkc tiling::desktop --focus $(chunkc get _last_active_desktop)
+shift + cmd - z : chunkc tiling::window --send-to-desktop prev; chunkc tiling::desktop --focus prev
+shift + cmd - c : chunkc tiling::window --send-to-desktop next; chunkc tiling::desktop --focus next
+shift + cmd - 1 : chunkc tiling::window --send-to-desktop 1; chunkc tiling::desktop --focus 1
+shift + cmd - 2 : chunkc tiling::window --send-to-desktop 2; chunkc tiling::desktop --focus 2
+shift + cmd - 3 : chunkc tiling::window --send-to-desktop 3; chunkc tiling::desktop --focus 3
+shift + cmd - 4 : chunkc tiling::window --send-to-desktop 4; chunkc tiling::desktop --focus 4
+shift + cmd - 5 : chunkc tiling::window --send-to-desktop 5; chunkc tiling::desktop --focus 5
+shift + cmd - 6 : chunkc tiling::window --send-to-desktop 6; chunkc tiling::desktop --focus 6
+shift + cmd - 7 : chunkc tiling::window --send-to-desktop 7; chunkc tiling::desktop --focus 7
+shift + cmd - 8 : chunkc tiling::window --send-to-desktop 8; chunkc tiling::desktop --focus 8
+shift + cmd - 9 : chunkc tiling::window --send-to-desktop 9; chunkc tiling::desktop --focus 9
+shift + cmd - 0 : chunkc tiling::window --send-to-desktop 10; chunkc tiling::desktop --focus 10
 
 # focus monitor
 ctrl + alt - z  : chunkc tiling::monitor -f prev
@@ -197,8 +257,11 @@ alt - q : chunkc tiling::window --toggle fade
 alt - t : chunkc tiling::window --toggle float;\
           chunkc tiling::window --grid-layout 4:4:1:1:2:2
 
+# toggle sticky
+alt - s : chunkc tiling::window --toggle sticky
+
 # toggle sticky, float and resize to picture-in-picture size
-alt - s : chunkc tiling::window --toggle sticky;\
+alt - p : chunkc tiling::window --toggle sticky;\
           chunkc tiling::window --grid-layout 5:5:4:0:1:1
 
 # float next window to be tiled
@@ -210,7 +273,3 @@ ctrl + alt - s : chunkc tiling::desktop --layout monocle
 ctrl + alt - d : chunkc tiling::desktop --layout float
 
 ctrl + alt - w : chunkc tiling::desktop --deserialize ~/.chunkwm_layouts/dev_1
-
-cmd - 7 : qes -k "shift + alt - 7"
-cmd - 8 : qes -k "shift + alt - 8"
-cmd - 9 : qes -k "shift + alt - 9"

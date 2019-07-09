@@ -1,35 +1,39 @@
 #ifndef SKHD_TOKENIZE_H
 #define SKHD_TOKENIZE_H
 
-static const char *modifier_flags_str[] =
+#define global static
+
+global const char *modifier_flags_str[] =
 {
     "alt",   "lalt",    "ralt",
     "shift", "lshift",  "rshift",
     "cmd",   "lcmd",    "rcmd",
     "ctrl",  "lctrl",   "rctrl",
-    "fn",    "hyper",
+    "fn",    "hyper",   "meh",
 };
 
-static const char *literal_keycode_str[] =
+global const char *literal_keycode_str[] =
 {
-    "return",     "tab",        "space",
-    "backspace",  "escape",     "delete",
-    "home",       "end",        "pageup",
-    "pagedown",   "insert",     "left",
-    "right",      "up",         "down",
-    "f1",         "f2",         "f3",
-    "f4",         "f5",         "f6",
-    "f7",         "f8",         "f9",
-    "f10",        "f11",        "f12",
-    "f13",        "f14",        "f15",
-    "f16",        "f17",        "f18",
-    "f19",        "f20",
+    "return",          "tab",             "space",
+    "backspace",       "escape",          "delete",
+    "home",            "end",             "pageup",
+    "pagedown",        "insert",          "left",
+    "right",           "up",              "down",
+    "f1",              "f2",              "f3",
+    "f4",              "f5",              "f6",
+    "f7",              "f8",              "f9",
+    "f10",             "f11",             "f12",
+    "f13",             "f14",             "f15",
+    "f16",             "f17",             "f18",
+    "f19",             "f20",
 
     "sound_up",        "sound_down",      "mute",
     "play",            "previous",        "next",
     "rewind",          "fast",            "brightness_up",
     "brightness_down", "illumination_up", "illumination_down"
 };
+
+#undef global
 
 enum token_type
 {
@@ -49,6 +53,13 @@ enum token_type
     Token_Dash,
     Token_Arrow,
     Token_Capture,
+    Token_Unbound,
+    Token_Wildcard,
+    Token_String,
+    Token_Option,
+
+    Token_BeginList,
+    Token_EndList,
 
     Token_Unknown,
     Token_EndOfStream,

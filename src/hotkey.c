@@ -1,7 +1,11 @@
 #include "hotkey.h"
 
 #define internal static
-#define local_persist static
+#define global   static
+
+#define HOTKEY_FOUND           ((1) << 0)
+#define MODE_CAPTURE(a)        ((a) << 1)
+#define HOTKEY_PASSTHROUGH(a)  ((a) << 2)
 
 #define LRMOD_ALT   0
 #define LRMOD_CMD   6
@@ -9,6 +13,9 @@
 #define LRMOD_SHIFT 3
 #define LMOD_OFFS   1
 #define RMOD_OFFS   2
+
+global char arg[] = "-c";
+global char *shell = NULL;
 
 internal uint32_t cgevent_lrmod_flag[] =
 {
@@ -67,7 +74,7 @@ unsigned long hash_hotkey(struct hotkey *a)
     return a->key;
 }
 
-bool same_mode(char *a, char *b)
+bool compare_string(char *a, char *b)
 {
     while (*a && *b && *a == *b) {
         ++a;
@@ -76,7 +83,7 @@ bool same_mode(char *a, char *b)
     return *a == '\0' && *b == '\0';
 }
 
-unsigned long hash_mode(char *key)
+unsigned long hash_string(char *key)
 {
     unsigned long hash = 0, high;
     while(*key) {
@@ -90,48 +97,86 @@ unsigned long hash_mode(char *key)
     return hash;
 }
 
-internal void
+internal inline void
 fork_and_exec(char *command)
 {
-    local_persist char arg[] = "-c";
-    local_persist char *shell = NULL;
-    if (!shell) {
-        char *env_shell = getenv("SHELL");
-        shell = env_shell ? env_shell : "/bin/bash";
-    }
-
     int cpid = fork();
     if (cpid == 0) {
+        setsid();
         char *exec[] = { shell, arg, command, NULL};
         int status_code = execvp(exec[0], exec);
         exit(status_code);
     }
 }
 
-internal inline bool
-passthrough(struct hotkey *hotkey)
+internal inline void
+passthrough(struct hotkey *hotkey, uint32_t *capture)
 {
-    return !has_flags(hotkey, Hotkey_Flag_Passthrough);
+    *capture |= HOTKEY_PASSTHROUGH((int)has_flags(hotkey, Hotkey_Flag_Passthrough));
 }
 
 internal inline struct hotkey *
-find_hotkey(struct mode *mode, struct hotkey *hotkey)
+find_hotkey(struct mode *mode, struct hotkey *hotkey, uint32_t *capture)
 {
-    return table_find(&mode->hotkey_map, hotkey);
+    struct hotkey *result = table_find(&mode->hotkey_map, hotkey);
+    if (result) *capture |= HOTKEY_FOUND;
+    return result;
 }
 
-bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m)
+internal inline bool
+should_capture_hotkey(uint32_t capture)
 {
-    bool c = (*m)->capture;
-    for (struct hotkey *h = find_hotkey(*m, k); h; c |= passthrough(h), h = 0) {
-        char *cmd = h->command;
+    if ((capture & HOTKEY_FOUND)) {
+        if (!(capture & MODE_CAPTURE(1)) &&
+            !(capture & HOTKEY_PASSTHROUGH(1))) {
+            return true;
+        }
+
+        if (!(capture & HOTKEY_PASSTHROUGH(1)) &&
+             (capture & MODE_CAPTURE(1))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    return (capture & MODE_CAPTURE(1));
+}
+
+internal inline char *
+find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct carbon_event *carbon)
+{
+    char *result = NULL;
+    bool found = false;
+
+    for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
+        if (same_string(carbon->process_name, hotkey->process_name[i])) {
+            result = hotkey->command[i];
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) result = hotkey->wildcard_command;
+    if (!result) *capture &= ~HOTKEY_FOUND;
+
+    return result;
+}
+
+bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon)
+{
+    uint32_t c = MODE_CAPTURE((int)(*m)->capture);
+    for (struct hotkey *h = find_hotkey(*m, k, &c); h; passthrough(h, &c), h = 0) {
+        char *cmd = h->command[0];
         if (has_flags(h, Hotkey_Flag_Activate)) {
             *m = table_find(t, cmd);
             cmd = (*m)->command;
+        } else if (buf_len(h->process_name) > 0) {
+            cmd = find_process_command_mapping(h, &c, carbon);
         }
         if (cmd) fork_and_exec(cmd);
     }
-    return c;
+    return should_capture_hotkey(c);
 }
 
 void free_mode_map(struct table *mode_map)
@@ -156,7 +201,17 @@ void free_mode_map(struct table *mode_map)
 
             buf_push(freed_pointers, hotkey);
             buf_free(hotkey->mode_list);
-            free(hotkey->command);
+
+            for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
+                free(hotkey->process_name[i]);
+            }
+            buf_free(hotkey->process_name);
+
+            for (int i = 0; i < buf_len(hotkey->command); ++i) {
+                free(hotkey->command[i]);
+            }
+            buf_free(hotkey->command);
+
             free(hotkey);
 next:;
         }
@@ -170,6 +225,16 @@ next:;
     if (mode_count) {
         free(modes);
         buf_free(freed_pointers);
+    }
+}
+
+void free_blacklist(struct table *blacklst)
+{
+    int count;
+    void **items = table_reset(blacklst, &count);
+    for (int index = 0; index < count; ++index) {
+        char *item = (char *) items[index];
+        free(item);
     }
 }
 
@@ -216,21 +281,30 @@ struct hotkey create_eventkey(CGEventRef event)
     return eventkey;
 }
 
-struct systemkey create_systemkey(CGEventRef event)
+bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey)
 {
     CFDataRef event_data = CGEventCreateData(kCFAllocatorDefault, event);
-    const uint8_t *data = CFDataGetBytePtr(event_data);
-    uint8_t event_subtype = data[123];
-    uint8_t key_code = data[129];
+    const uint8_t *data  = CFDataGetBytePtr(event_data);
+    uint8_t key_code  = data[129];
     uint8_t key_state = data[130];
+    uint8_t key_stype = data[123];
     CFRelease(event_data);
 
-    struct systemkey systemkey = {
-        .eventkey = {
-            .key = key_code,
-            .flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX
-        },
-        .intercept = key_state == NX_KEYDOWN && event_subtype == NX_SUBTYPE_AUX_CONTROL_BUTTONS
-    };
-    return systemkey;
+    bool result = ((key_state == NX_KEYDOWN) &&
+                   (key_stype == NX_SUBTYPE_AUX_CONTROL_BUTTONS));
+
+    if (result) {
+        eventkey->key = key_code;
+        eventkey->flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX;
+    }
+
+    return result;
+}
+
+void init_shell(void)
+{
+    if (!shell) {
+        char *env_shell = getenv("SHELL");
+        shell = env_shell ? env_shell : "/bin/bash";
+    }
 }

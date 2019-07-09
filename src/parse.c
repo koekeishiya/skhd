@@ -22,8 +22,6 @@ find_or_init_default_mode(struct parser *parser)
     }
 
     default_mode = malloc(sizeof(struct mode));
-    default_mode->line = -1;
-    default_mode->cursor = -1;
     default_mode->name = copy_string("default");
 
     table_init(&default_mode->hotkey_map, 131,
@@ -74,13 +72,63 @@ keycode_from_hex(char *hex)
     return result;
 }
 
-internal char *
-parse_command(struct parser *parser)
+internal void
+parse_command(struct parser *parser, struct hotkey *hotkey)
 {
     struct token command = parser_previous(parser);
     char *result = copy_string_count(command.text, command.length);
-    printf("\tcmd: '%s'\n", result);
-    return result;
+    debug("\tcmd: '%s'\n", result);
+    buf_push(hotkey->command, result);
+}
+
+internal void
+parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
+{
+    if (parser_match(parser, Token_String)) {
+        struct token name_token = parser_previous(parser);
+        char *name = copy_string_count(name_token.text, name_token.length);
+        for (char *s = name; *s; ++s) *s = tolower(*s);
+        buf_push(hotkey->process_name, name);
+        if (parser_match(parser, Token_Command)) {
+            parse_command(parser, hotkey);
+            parse_process_command_list(parser, hotkey);
+        } else if (parser_match(parser, Token_Unbound)) {
+            buf_push(hotkey->command, NULL);
+            parse_process_command_list(parser, hotkey);
+        } else {
+            parser_report_error(parser, parser_peek(parser), "expected '~' or ':' followed by command\n");
+        }
+    } else if (parser_match(parser, Token_Wildcard)) {
+        if (parser_match(parser, Token_Command)) {
+            struct token command = parser_previous(parser);
+            char *result = copy_string_count(command.text, command.length);
+            debug("\tcmd: '%s'\n", result);
+            hotkey->wildcard_command = result;
+            parse_process_command_list(parser, hotkey);
+        } else if (parser_match(parser, Token_Unbound)) {
+            hotkey->wildcard_command = NULL;
+            parse_process_command_list(parser, hotkey);
+        } else {
+            parser_report_error(parser, parser_peek(parser), "expected '~' or ':' followed by command\n");
+        }
+    } else if (parser_match(parser, Token_EndList)) {
+        if (!buf_len(hotkey->process_name)) {
+            parser_report_error(parser, parser_previous(parser), "list must contain at least one value\n");
+        }
+    } else {
+        parser_report_error(parser, parser_peek(parser), "expected process command mapping or ']'\n");
+    }
+}
+
+internal void
+parse_activate(struct parser *parser, struct hotkey *hotkey)
+{
+    parse_command(parser, hotkey);
+    hotkey->flags |= Hotkey_Flag_Activate;
+
+    if (!table_find(parser->mode_map, hotkey->command[0])) {
+        parser_report_error(parser, parser_previous(parser), "undeclared identifier\n");
+    }
 }
 
 internal uint32_t
@@ -90,7 +138,7 @@ parse_key_hex(struct parser *parser)
     char *hex = copy_string_count(key.text, key.length);
     uint32_t keycode = keycode_from_hex(hex);
     free(hex);
-    printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
+    debug("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, keycode);
     return keycode;
 }
 
@@ -100,7 +148,7 @@ parse_key(struct parser *parser)
     uint32_t keycode;
     struct token key = parser_previous(parser);
     keycode = keycode_from_char(*key.text);
-    printf("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
+    debug("\tkey: '%c' (0x%02x)\n", *key.text, keycode);
     return keycode;
 }
 
@@ -146,7 +194,7 @@ parse_key_literal(struct parser *parser, struct hotkey *hotkey)
         if (token_equals(key, literal_keycode_str[i])) {
             handle_implicit_literal_flags(hotkey, i);
             hotkey->key = literal_keycode_value[i];
-            printf("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
+            debug("\tkey: '%.*s' (0x%02x)\n", key.length, key.text, hotkey->key);
             break;
         }
     }
@@ -158,7 +206,7 @@ internal enum hotkey_flag modifier_flags_value[] =
     Hotkey_Flag_Shift,      Hotkey_Flag_LShift,     Hotkey_Flag_RShift,
     Hotkey_Flag_Cmd,        Hotkey_Flag_LCmd,       Hotkey_Flag_RCmd,
     Hotkey_Flag_Control,    Hotkey_Flag_LControl,   Hotkey_Flag_RControl,
-    Hotkey_Flag_Fn,         Hotkey_Flag_Hyper,
+    Hotkey_Flag_Fn,         Hotkey_Flag_Hyper,      Hotkey_Flag_Meh,
 };
 
 internal uint32_t
@@ -170,7 +218,7 @@ parse_modifier(struct parser *parser)
     for (int i = 0; i < array_count(modifier_flags_str); ++i) {
         if (token_equals(modifier, modifier_flags_str[i])) {
             flags |= modifier_flags_value[i];
-            printf("\tmod: '%s'\n", modifier_flags_str[i]);
+            debug("\tmod: '%s'\n", modifier_flags_str[i]);
             break;
         }
     }
@@ -179,7 +227,7 @@ parse_modifier(struct parser *parser)
         if (parser_match(parser, Token_Modifier)) {
             flags |= parse_modifier(parser);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected modifier");
+            parser_report_error(parser, parser_peek(parser), "expected modifier\n");
         }
     }
 
@@ -198,18 +246,18 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
     if (!mode && token_equals(identifier, "default")) {
         mode = find_or_init_default_mode(parser);
     } else if (!mode) {
-        parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+        parser_report_error(parser, identifier, "undeclared identifier\n");
         return;
     }
 
     buf_push(hotkey->mode_list, mode);
-    printf("\tmode: '%s'\n", mode->name);
+    debug("\tmode: '%s'\n", mode->name);
 
     if (parser_match(parser, Token_Comma)) {
         if (parser_match(parser, Token_Identifier)) {
             parse_mode(parser, hotkey);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected identifier");
+            parser_report_error(parser, parser_peek(parser), "expected identifier\n");
         }
     }
 }
@@ -221,7 +269,7 @@ parse_hotkey(struct parser *parser)
     memset(hotkey, 0, sizeof(struct hotkey));
     bool found_modifier;
 
-    printf("hotkey :: #%d {\n", parser->current_token.line);
+    debug("hotkey :: #%d {\n", parser->current_token.line);
 
     if (parser_match(parser, Token_Identifier)) {
         parse_mode(parser, hotkey);
@@ -232,7 +280,7 @@ parse_hotkey(struct parser *parser)
 
     if (buf_len(hotkey->mode_list) > 0) {
         if (!parser_match(parser, Token_Insert)) {
-            parser_report_error(parser, Error_Unexpected_Token, "expected '<'");
+            parser_report_error(parser, parser_peek(parser), "expected '<'\n");
             goto err;
         }
     } else {
@@ -248,7 +296,7 @@ parse_hotkey(struct parser *parser)
 
     if (found_modifier) {
         if (!parser_match(parser, Token_Dash)) {
-            parser_report_error(parser, Error_Unexpected_Token, "expected '-'");
+            parser_report_error(parser, parser_peek(parser), "expected '-'\n");
             goto err;
         }
     }
@@ -260,7 +308,7 @@ parse_hotkey(struct parser *parser)
     } else if (parser_match(parser, Token_Literal)) {
         parse_key_literal(parser, hotkey);
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected key-literal");
+        parser_report_error(parser, parser_peek(parser), "expected key-literal\n");
         goto err;
     }
 
@@ -269,20 +317,23 @@ parse_hotkey(struct parser *parser)
     }
 
     if (parser_match(parser, Token_Command)) {
-        hotkey->command = parse_command(parser);
+        parse_command(parser, hotkey);
+    } else if (parser_match(parser, Token_BeginList)) {
+        parse_process_command_list(parser, hotkey);
+        if (parser->error) {
+            goto err;
+        }
     } else if (parser_match(parser, Token_Activate)) {
-        hotkey->flags |= Hotkey_Flag_Activate;
-        hotkey->command = parse_command(parser);
-        if (!table_find(parser->mode_map, hotkey->command)) {
-            parser_report_error(parser, Error_Undeclared_Ident, "undeclared identifier");
+        parse_activate(parser, hotkey);
+        if (parser->error) {
             goto err;
         }
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected ':' followed by command or ';' followed by mode");
+        parser_report_error(parser, parser_peek(parser), "expected ':' followed by command or ';' followed by mode\n");
         goto err;
     }
 
-    printf("}\n");
+    debug("}\n");
     return hotkey;
 
 err:
@@ -296,8 +347,6 @@ parse_mode_decl(struct parser *parser)
     struct mode *mode = malloc(sizeof(struct mode));
     struct token identifier = parser_previous(parser);
 
-    mode->line = identifier.line;
-    mode->cursor = identifier.cursor;
     mode->name = copy_string_count(identifier.text, identifier.length);
 
     table_init(&mode->hotkey_map, 131,
@@ -321,32 +370,96 @@ parse_mode_decl(struct parser *parser)
 
 void parse_declaration(struct parser *parser)
 {
-    struct mode *mode;
     parser_match(parser, Token_Decl);
     if (parser_match(parser, Token_Identifier)) {
-        mode = parse_mode_decl(parser);
+        struct token identifier = parser_previous(parser);
+        struct mode *mode = parse_mode_decl(parser);
         if (table_find(parser->mode_map, mode->name)) {
-            parser_report_error(parser, Error_Duplicate_Ident,
-                                "#%d:%d duplicate declaration '%s'\n",
-                                mode->line, mode->cursor, mode->name);
+            parser_report_error(parser, identifier, "duplicate declaration '%s'\n", mode->name);
         } else {
             table_add(parser->mode_map, mode->name, mode);
         }
     } else {
-        parser_report_error(parser, Error_Unexpected_Token, "expected identifier");
+        parser_report_error(parser, parser_peek(parser), "expected identifier\n");
     }
 }
 
-void parse_config(struct parser *parser)
+void parse_option_blacklist(struct parser *parser)
+{
+    if (parser_match(parser, Token_String)) {
+        struct token name_token = parser_previous(parser);
+        char *name = copy_string_count(name_token.text, name_token.length);
+        for (char *s = name; *s; ++s) *s = tolower(*s);
+        debug("\t%s\n", name);
+        table_add(parser->blacklst, name, name);
+        parse_option_blacklist(parser);
+    } else if (parser_match(parser, Token_EndList)) {
+        if (parser->blacklst->count == 0) {
+            parser_report_error(parser, parser_previous(parser), "list must contain at least one value\n");
+        }
+    } else {
+        parser_report_error(parser, parser_peek(parser), "expected process name or ']'\n");
+    }
+}
+
+void parse_option_load(struct parser *parser, struct token option)
+{
+    struct token filename_token = parser_previous(parser);
+    char *filename = copy_string_count(filename_token.text, filename_token.length);
+    debug("\t%s\n", filename);
+
+    if (*filename != '/') {
+        char *directory = file_directory(parser->file);
+
+        size_t directory_length = strlen(directory);
+        size_t filename_length  = strlen(filename);
+        size_t total_length     = directory_length + filename_length + 2;
+
+        char *absolutepath = malloc(total_length * sizeof(char));
+        snprintf(absolutepath, total_length, "%s/%s", directory, filename);
+        free(filename);
+
+        filename = absolutepath;
+    }
+
+    buf_push(parser->load_directives, ((struct load_directive) {
+        .file  = filename,
+        .option = option
+    }));
+}
+
+void parse_option(struct parser *parser)
+{
+    parser_match(parser, Token_Option);
+    struct token option = parser_previous(parser);
+    if (token_equals(option, "blacklist")) {
+        if (parser_match(parser, Token_BeginList)) {
+            debug("blacklist :: #%d {\n", option.line);
+            parse_option_blacklist(parser);
+            debug("}\n");
+        } else {
+            parser_report_error(parser, option, "expected '[' followed by list of process names\n");
+        }
+    } else if (token_equals(option, "load")) {
+        if (parser_match(parser, Token_String)) {
+            debug("load :: #%d {\n", option.line);
+            parse_option_load(parser, option);
+            debug("}\n");
+        } else {
+            parser_report_error(parser, option, "expected filename\n");
+        }
+    } else {
+        parser_report_error(parser, option, "invalid option specified\n");
+    }
+}
+
+bool parse_config(struct parser *parser)
 {
     struct mode *mode;
     struct hotkey *hotkey;
 
     while (!parser_eof(parser)) {
-        if (parser->error) {
-            free_mode_map(parser->mode_map);
-            return;
-        }
+        if (parser->error) break;
 
         if ((parser_check(parser, Token_Identifier)) ||
             (parser_check(parser, Token_Modifier)) ||
@@ -361,10 +474,64 @@ void parse_config(struct parser *parser)
             }
         } else if (parser_check(parser, Token_Decl)) {
             parse_declaration(parser);
+        } else if (parser_check(parser, Token_Option)) {
+            parse_option(parser);
         } else {
-            parser_report_error(parser, Error_Unexpected_Token, "expected decl, modifier or key-literal");
+            parser_report_error(parser, parser_peek(parser), "expected decl, modifier or key-literal\n");
         }
     }
+
+    if (parser->error) {
+        free_mode_map(parser->mode_map);
+        free_blacklist(parser->blacklst);
+        return false;
+    }
+
+    return true;
+}
+
+struct hotkey *
+parse_keypress(struct parser *parser)
+{
+    if ((parser_check(parser, Token_Modifier)) ||
+        (parser_check(parser, Token_Literal)) ||
+        (parser_check(parser, Token_Key_Hex)) ||
+        (parser_check(parser, Token_Key))) {
+        struct hotkey *hotkey = malloc(sizeof(struct hotkey));
+        memset(hotkey, 0, sizeof(struct hotkey));
+        bool found_modifier;
+
+        if ((found_modifier = parser_match(parser, Token_Modifier))) {
+            hotkey->flags = parse_modifier(parser);
+            if (parser->error) {
+                goto err;
+            }
+        }
+
+        if (found_modifier) {
+            if (!parser_match(parser, Token_Dash)) {
+                goto err;
+            }
+        }
+
+        if (parser_match(parser, Token_Key)) {
+            hotkey->key = parse_key(parser);
+        } else if (parser_match(parser, Token_Key_Hex)) {
+            hotkey->key = parse_key_hex(parser);
+        } else if (parser_match(parser, Token_Literal)) {
+            parse_key_literal(parser, hotkey);
+        } else {
+            goto err;
+        }
+
+        return hotkey;
+
+    err:
+        free(hotkey);
+        return NULL;
+    }
+
+    return NULL;
 }
 
 struct token
@@ -411,38 +578,71 @@ bool parser_match(struct parser *parser, enum token_type type)
     return false;
 }
 
-void parser_report_error(struct parser *parser, enum parse_error_type error_type, const char *format, ...)
+void parser_report_error(struct parser *parser, struct token token, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-
-    if (error_type == Error_Unexpected_Token) {
-        fprintf(stderr, "#%d:%d ", parser->current_token.line, parser->current_token.cursor);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, ", but got '%.*s'\n", parser->current_token.length, parser->current_token.text);
-    } else if (error_type == Error_Undeclared_Ident) {
-        fprintf(stderr, "#%d:%d ", parser->previous_token.line, parser->previous_token.cursor);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, " '%.*s'\n", parser->previous_token.length, parser->previous_token.text);
-    } else if (error_type == Error_Duplicate_Ident) {
-        vfprintf(stderr, format, args);
-    }
-
+    fprintf(stderr, "#%d:%d ", token.line, token.cursor);
+    vfprintf(stderr, format, args);
     va_end(args);
     parser->error = true;
 }
 
-bool parser_init(struct parser *parser, struct table *mode_map, char *file)
+void parser_do_directives(struct parser *parser, struct hotloader *hotloader, bool thwart_hotloader)
+{
+    bool error = false;
+
+    for (int i = 0; i < buf_len(parser->load_directives); ++i) {
+        struct load_directive load = parser->load_directives[i];
+
+        struct parser directive_parser;
+        if (parser_init(&directive_parser, parser->mode_map, parser->blacklst, load.file)) {
+            if (!thwart_hotloader) {
+                hotloader_add_file(hotloader, load.file);
+            }
+
+            if (parse_config(&directive_parser)) {
+                parser_do_directives(&directive_parser, hotloader, thwart_hotloader);
+            } else {
+                error = true;
+            }
+
+            parser_destroy(&directive_parser);
+        } else {
+            warn("skhd: could not open file '%s' from load directive #%d:%d\n", load.file, load.option.line, load.option.cursor);
+        }
+
+        free(load.file);
+    }
+    buf_free(parser->load_directives);
+
+    if (error) {
+        free_mode_map(parser->mode_map);
+        free_blacklist(parser->blacklst);
+    }
+}
+
+bool parser_init(struct parser *parser, struct table *mode_map, struct table *blacklst, char *file)
 {
     memset(parser, 0, sizeof(struct parser));
     char *buffer = read_file(file);
     if (buffer) {
+        parser->file     = file;
         parser->mode_map = mode_map;
+        parser->blacklst = blacklst;
         tokenizer_init(&parser->tokenizer, buffer);
         parser_advance(parser);
         return true;
     }
     return false;
+}
+
+bool parser_init_text(struct parser *parser, char *text)
+{
+    memset(parser, 0, sizeof(struct parser));
+    tokenizer_init(&parser->tokenizer, text);
+    parser_advance(parser);
+    return true;
 }
 
 void parser_destroy(struct parser *parser)

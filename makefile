@@ -1,4 +1,4 @@
-FRAMEWORKS     = -framework Carbon -F/System/Library/PrivateFrameworks -framework MultitouchSupport
+FRAMEWORKS     = -framework Carbon -framework CoreAudio -F/System/Library/PrivateFrameworks -framework MultitouchSupport
 BUILD_PATH     = ./bin
 BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c
@@ -10,9 +10,6 @@ all: clean $(BINS)
 
 install: BUILD_FLAGS=-std=c99 -O3
 install: clean $(BINS)
-
-segfault: BUILD_FLAGS=-O0 -g -Wall -std=c99 -D_FORTIFY_SOURCE=2 -fstack-protector-strong --param ssp-buffer-size=4 -fPIC -fno-strict-overflow -Wformat -Wformat-security -Werror=format-security
-segfault: clean $(BINS)
 
 clean:
 	rm -rf $(BUILD_PATH)

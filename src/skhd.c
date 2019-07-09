@@ -5,88 +5,145 @@
 #include <getopt.h>
 #include <signal.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 #include <unistd.h>
 #include <Carbon/Carbon.h>
 
+#include "timing.h"
+#include "log.h"
 #define HASHTABLE_IMPLEMENTATION
 #include "hashtable.h"
 #include "sbuffer.h"
 #include "hotload.h"
 #include "event_tap.h"
 #include "locale.h"
+#include "carbon.h"
 #include "tokenize.h"
 #include "parse.h"
 #include "hotkey.h"
+#include "synthesize.h"
 #include "mtouch.h"
 
 #include "hotload.c"
 #include "event_tap.c"
 #include "locale.c"
+#include "carbon.c"
 #include "tokenize.c"
 #include "parse.c"
 #include "hotkey.c"
+#include "synthesize.c"
 #include "mtouch.c"
 
-#define internal static
-extern bool CGSIsSecureEventInputSet();
+extern CFDictionaryRef CGSCopyCurrentSessionDictionary(void);
+extern bool CGSIsSecureEventInputSet(void);
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
 
-#if 0
-#define BEGIN_TIMED_BLOCK() \
-    clock_t timed_block_begin = clock()
-#define END_TIMED_BLOCK() \
-    clock_t timed_block_end = clock(); \
-    double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f; \
-    printf("elapsed time: %.4fms\n", timed_block_elapsed)
-#else
-#define BEGIN_TIMED_BLOCK()
-#define END_TIMED_BLOCK()
-#endif
+#define internal static
+#define global   static
 
-internal unsigned major_version = 0;
-internal unsigned minor_version = 2;
-internal unsigned patch_version = 1;
+#define SKHD_CONFIG_FILE ".skhdrc"
+#define SKHD_PIDFILE_FMT "/tmp/skhd_%s.pid"
 
-internal struct mode *current_mode;
-internal struct table mode_map;
-internal char *config_file;
+global unsigned major_version = 0;
+global unsigned minor_version = 3;
+global unsigned patch_version = 4;
 
-internal void
-error(const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    exit(EXIT_FAILURE);
-}
+global struct carbon_event carbon;
+global struct event_tap event_tap;
+global struct hotloader hotloader;
+global struct mode *current_mode;
+global struct table mode_map;
+global struct table blacklst;
+global bool thwart_hotloader;
+global char *config_file;
 
-internal void
-warn(const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-}
+internal HOTLOADER_CALLBACK(config_handler);
 
 internal void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
-    if (parser_init(&parser, &mode_map, absolutepath)) {
-        parse_config(&parser);
+    if (parser_init(&parser, &mode_map, &blacklst, absolutepath)) {
+        if (!thwart_hotloader) {
+            hotloader_end(&hotloader);
+            hotloader_add_file(&hotloader, absolutepath);
+        }
+
+        if (parse_config(&parser)) {
+            parser_do_directives(&parser, &hotloader, thwart_hotloader);
+        }
         parser_destroy(&parser);
+
+        if (!thwart_hotloader) {
+            if (hotloader_begin(&hotloader, config_handler)) {
+                debug("skhd: watching files for changes:\n", absolutepath);
+                for (int i = 0; i < hotloader.watch_count; ++i) {
+                    debug("\t%s\n", hotloader.watch_list[i].file_info.absolutepath);
+                }
+            } else {
+                warn("skhd: could not start watcher.. hotloading is not enabled\n");
+            }
+        }
     } else {
         warn("skhd: could not open file '%s'\n", absolutepath);
     }
+
     current_mode = table_find(&mode_map, "default");
 }
 
 internal HOTLOADER_CALLBACK(config_handler)
 {
+    BEGIN_TIMED_BLOCK("hotload_config");
+    debug("skhd: config-file has been modified.. reloading config\n");
     free_mode_map(&mode_map);
-    parse_config_helper(absolutepath);
+    free_blacklist(&blacklst);
+    parse_config_helper(config_file);
+    END_TIMED_BLOCK();
+}
+
+internal CF_NOTIFICATION_CALLBACK(keymap_handler)
+{
+    BEGIN_TIMED_BLOCK("keymap_changed");
+    if (initialize_keycode_map()) {
+        debug("skhd: input source changed.. reloading config\n");
+        free_mode_map(&mode_map);
+        free_blacklist(&blacklst);
+        parse_config_helper(config_file);
+    }
+    END_TIMED_BLOCK();
+}
+
+internal EVENT_TAP_CALLBACK(key_observer_handler)
+{
+    switch (type) {
+    case kCGEventTapDisabledByTimeout:
+    case kCGEventTapDisabledByUserInput: {
+        debug("skhd: restarting event-tap\n");
+        struct event_tap *event_tap = (struct event_tap *) reference;
+        CGEventTapEnable(event_tap->handle, 1);
+    } break;
+    case kCGEventKeyDown:
+    case kCGEventFlagsChanged: {
+        uint32_t flags = CGEventGetFlags(event);
+        uint32_t keycode = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
+
+        if (keycode == kVK_ANSI_C && flags & 0x40000) {
+            exit(0);
+        }
+
+        printf("\rkeycode: 0x%.2X\tflags: ", keycode);
+        for (int i = 31; i >= 0; --i) {
+            printf("%c", (flags & (1 << i)) ? '1' : '0');
+        }
+        fflush(stdout);
+
+        return NULL;
+    } break;
+    }
+    return event;
 }
 
 internal EVENT_TAP_CALLBACK(key_handler)
@@ -94,23 +151,28 @@ internal EVENT_TAP_CALLBACK(key_handler)
     switch (type) {
     case kCGEventTapDisabledByTimeout:
     case kCGEventTapDisabledByUserInput: {
-        printf("skhd: restarting event-tap\n");
+        debug("skhd: restarting event-tap\n");
         struct event_tap *event_tap = (struct event_tap *) reference;
         CGEventTapEnable(event_tap->handle, 1);
     } break;
     case kCGEventKeyDown: {
+        if (table_find(&blacklst, carbon.process_name)) return event;
         if (!current_mode) return event;
 
+        BEGIN_TIMED_BLOCK("handle_keypress");
         struct hotkey eventkey = create_eventkey(event);
-        bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode);
+        bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode, &carbon);
+        END_TIMED_BLOCK();
+
         if (result) return NULL;
     } break;
     case NX_SYSDEFINED: {
+        if (table_find(&blacklst, carbon.process_name)) return event;
         if (!current_mode) return event;
 
-        struct systemkey systemkey = create_systemkey(event);
-        if (systemkey.intercept) {
-            bool result = find_and_exec_hotkey(&systemkey.eventkey, &mode_map, &current_mode);
+        struct hotkey eventkey;
+        if (intercept_systemkey(event, &eventkey)) {
+            bool result = find_and_exec_hotkey(&eventkey, &mode_map, &current_mode, &carbon);
             if (result) return NULL;
         }
     } break;
@@ -146,25 +208,137 @@ internal MULTITOUCH_CALLBACK(touch_handler)
     return 0;
 }
 
+internal void
+sigusr1_handler(int signal)
+{
+    BEGIN_TIMED_BLOCK("sigusr1");
+    debug("skhd: SIGUSR1 received.. reloading config\n");
+    free_mode_map(&mode_map);
+    free_blacklist(&blacklst);
+    parse_config_helper(config_file);
+    END_TIMED_BLOCK();
+}
+
+internal pid_t
+read_pid_file(void)
+{
+    char pid_file[255] = {};
+    pid_t pid = 0;
+
+    char *user = getenv("USER");
+    if (user) {
+        snprintf(pid_file, sizeof(pid_file), SKHD_PIDFILE_FMT, user);
+    } else {
+        error("skhd: could not create path to pid-file because 'env USER' was not set! abort..\n");
+    }
+
+    int handle = open(pid_file, O_RDWR);
+    if (handle == -1) {
+        error("skhd: could not open pid-file..\n");
+    }
+
+    if (flock(handle, LOCK_EX | LOCK_NB) == 0) {
+        error("skhd: could not locate existing instance..\n");
+    } else if (read(handle, &pid, sizeof(pid_t)) == -1) {
+        error("skhd: could not read pid-file..\n");
+    }
+
+    close(handle);
+    return pid;
+}
+
+internal void
+create_pid_file(void)
+{
+    char pid_file[255] = {};
+    pid_t pid = getpid();
+
+    char *user = getenv("USER");
+    if (user) {
+        snprintf(pid_file, sizeof(pid_file), SKHD_PIDFILE_FMT, user);
+    } else {
+        error("skhd: could not create path to pid-file because 'env USER' was not set! abort..\n");
+    }
+
+    int handle = open(pid_file, O_CREAT | O_RDWR, 0644);
+    if (handle == -1) {
+        error("skhd: could not create pid-file! abort..\n");
+    }
+
+    struct flock lockfd = {
+        .l_start  = 0,
+        .l_len    = 0,
+        .l_pid    = pid,
+        .l_type   = F_WRLCK,
+        .l_whence = SEEK_SET
+    };
+
+    if (fcntl(handle, F_SETLK, &lockfd) == -1) {
+        error("skhd: could not lock pid-file! abort..\n");
+    } else if (write(handle, &pid, sizeof(pid_t)) == -1) {
+        error("skhd: could not write pid-file! abort..\n");
+    }
+
+    // NOTE(koekeishiya): we intentionally leave the handle open,
+    // as calling close(..) will release the lock we just acquired.
+
+    debug("skhd: successfully created pid-file..\n");
+}
+
 internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
-    const char *short_option = "vc:";
+    const char *short_option = "VPvc:k:t:rho";
     struct option long_option[] = {
+        { "verbose", no_argument, NULL, 'V' },
+        { "profile", no_argument, NULL, 'P' },
         { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
+        { "no-hotload", no_argument, NULL, 'h' },
+        { "key", required_argument, NULL, 'k' },
+        { "text", required_argument, NULL, 't' },
+        { "reload", no_argument, NULL, 'r' },
+        { "observe", no_argument, NULL, 'o' },
         { NULL, 0, NULL, 0 }
     };
 
     while ((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
         switch (option) {
+        case 'V': {
+            verbose = true;
+        } break;
+        case 'P': {
+            profile = true;
+        } break;
         case 'v': {
             printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
             return true;
         } break;
         case 'c': {
-            config_file = strdup(optarg);
+            config_file = copy_string(optarg);
+        } break;
+        case 'h': {
+            thwart_hotloader = true;
+        } break;
+        case 'k': {
+            synthesize_key(optarg);
+            return true;
+        } break;
+        case 't': {
+            synthesize_text(optarg);
+            return true;
+        } break;
+        case 'r': {
+            pid_t pid = read_pid_file();
+            if (pid) kill(pid, SIGUSR1);
+            return true;
+        } break;
+        case 'o': {
+            event_tap.mask = (1 << kCGEventKeyDown) |
+                             (1 << kCGEventFlagsChanged);
+            event_tap_begin(&event_tap, key_observer_handler);
+            CFRunLoopRun();
         } break;
         }
     }
@@ -173,7 +347,7 @@ parse_arguments(int argc, char **argv)
 }
 
 internal bool
-check_privileges()
+check_privileges(void)
 {
     bool result;
     const void *keys[] = { kAXTrustedCheckOptionPrompt };
@@ -192,31 +366,63 @@ check_privileges()
 }
 
 internal void
-set_config_path()
+use_default_config_path(void)
 {
     char *home = getenv("HOME");
-    if (home) {
-        int length = strlen(home) + strlen("/.skhdrc");
-        config_file = (char *) malloc(length + 1);
-        strcpy(config_file, home);
-        strcat(config_file, "/.skhdrc");
-    } else {
-        config_file = strdup(".skhdrc");
+    if (!home) {
+        error("skhd: could not locate config because 'env HOME' was not set! abort..\n");
     }
+
+    int home_len = strlen(home);
+    int config_len = strlen("/"SKHD_CONFIG_FILE);
+    int length = home_len + config_len;
+    config_file = malloc(length + 1);
+    memcpy(config_file, home, home_len);
+    memcpy(config_file + home_len, "/"SKHD_CONFIG_FILE, config_len);
+    config_file[length] = '\0';
+}
+
+internal void
+dump_secure_keyboard_entry_process_info(void)
+{
+    CFDictionaryRef session;
+    CFNumberRef pid_ref;
+    char *process_name;
+    pid_t pid;
+
+    session = CGSCopyCurrentSessionDictionary();
+    if (!session) goto err;
+
+    pid_ref = (CFNumberRef) CFDictionaryGetValue(session, CFSTR("kCGSSessionSecureInputPID"));
+    if (!pid_ref) goto err;
+
+    CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), &pid);
+    process_name = find_process_name_for_pid(pid);
+
+    if (process_name) {
+        error("skhd: secure keyboard entry is enabled by (%lld) '%s'! abort..\n", pid, process_name);
+    }
+
+err:
+    error("skhd: secure keyboard entry is enabled! abort..\n");
 }
 
 int main(int argc, char **argv)
 {
-    if (parse_arguments(argc, argv)) {
-        return EXIT_SUCCESS;
-    }
-
     if (getuid() == 0 || geteuid() == 0) {
         error("skhd: running as root is not allowed! abort..\n");
     }
 
+    if (parse_arguments(argc, argv)) {
+        return EXIT_SUCCESS;
+    }
+
+    BEGIN_SCOPED_TIMED_BLOCK("total_time");
+    BEGIN_SCOPED_TIMED_BLOCK("init");
+    create_pid_file();
+
     if (secure_keyboard_entry_enabled()) {
-        error("skhd: secure keyboard entry is enabled! abort..\n");
+        dump_secure_keyboard_entry_process_info();
     }
 
     if (!check_privileges()) {
@@ -227,24 +433,42 @@ int main(int argc, char **argv)
         error("skhd: could not initialize keycode map! abort..\n");
     }
 
-    if (!config_file) {
-        set_config_path();
+    if (!carbon_event_init(&carbon)) {
+        error("skhd: could not initialize carbon events! abort..\n");
     }
 
-    printf("skhd: using config '%s'\n", config_file);
-    table_init(&mode_map, 13, (table_hash_func) hash_mode, (table_compare_func) same_mode);
-    parse_config_helper(config_file);
-    signal(SIGCHLD, SIG_IGN);
+    if (!config_file) {
+        use_default_config_path();
+    }
 
-    struct event_tap event_tap = { .mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED) };
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),
+                                    NULL,
+                                    &keymap_handler,
+                                    kTISNotifySelectedKeyboardInputSourceChanged,
+                                    NULL,
+                                    CFNotificationSuspensionBehaviorCoalesce);
+
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGUSR1, sigusr1_handler);
+
+    init_shell();
+    table_init(&mode_map, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
+    table_init(&blacklst, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
+    END_SCOPED_TIMED_BLOCK();
+
+    BEGIN_SCOPED_TIMED_BLOCK("parse_config");
+    debug("skhd: using config '%s'\n", config_file);
+    parse_config_helper(config_file);
+    END_SCOPED_TIMED_BLOCK();
+
+    BEGIN_SCOPED_TIMED_BLOCK("begin_eventtap");
+    event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
     event_tap_begin(&event_tap, key_handler);
+    END_SCOPED_TIMED_BLOCK();
 
     struct multitouch multitouch;
     multitouch_begin(&multitouch, touch_handler);
-
-    struct hotloader hotloader = {};
-    hotloader_add_file(&hotloader, config_file);
-    hotloader_begin(&hotloader, config_handler);
+    END_SCOPED_TIMED_BLOCK();
 
     CFRunLoopRun();
     return EXIT_SUCCESS;

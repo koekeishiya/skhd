@@ -63,6 +63,30 @@ eat_hex(struct tokenizer *tokenizer)
     }
 }
 
+internal void
+eat_string(struct tokenizer *tokenizer)
+{
+    /*
+     * NOTE(koekeishiya): This is NOT proper string parsing code, as we do
+     * not check for escaped '"' here. At the time of writing, this is only
+     * supposed to be used for parsing names of processes, and such names
+     * should not contain escaped quotes at all. We are lazy and simply do
+     * the most basic implementation that fulfills our current requirement.
+     */
+
+    while (*tokenizer->at && *tokenizer->at != '"') {
+        advance(tokenizer);
+    }
+}
+
+internal void
+eat_option(struct tokenizer *tokenizer)
+{
+    while (*tokenizer->at && !isspace(*tokenizer->at)) {
+        advance(tokenizer);
+    }
+}
+
 internal inline bool
 isidentifier(char c)
 {
@@ -130,6 +154,30 @@ get_token(struct tokenizer *tokenizer)
     case ',': { token.type = Token_Comma;       } break;
     case '<': { token.type = Token_Insert;      } break;
     case '@': { token.type = Token_Capture;     } break;
+    case '~': { token.type = Token_Unbound;     } break;
+    case '*': { token.type = Token_Wildcard;    } break;
+    case '[': { token.type = Token_BeginList;   } break;
+    case ']': { token.type = Token_EndList;     } break;
+    case '.': {
+        token.text = tokenizer->at;
+        token.line = tokenizer->line;
+        token.cursor = tokenizer->cursor;
+
+        eat_option(tokenizer);
+        token.length = tokenizer->at - token.text;
+        token.type = Token_Option;
+    } break;
+    case '"': {
+        token.text = tokenizer->at;
+        token.line = tokenizer->line;
+        token.cursor = tokenizer->cursor;
+
+        eat_string(tokenizer);
+        token.length = tokenizer->at - token.text;
+        token.type = Token_String;
+
+        advance(tokenizer);
+    } break;
     case '#': {
         eat_comment(tokenizer);
         token = get_token(tokenizer);

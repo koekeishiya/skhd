@@ -1,24 +1,25 @@
 #include "locale.h"
 #include "hashtable.h"
+#include "sbuffer.h"
 #include <Carbon/Carbon.h>
 #include <IOKit/hidsystem/ev_keymap.h>
 
-#define internal static
-#define local_persist static
+#define array_count(a) (sizeof((a)) / sizeof(*(a)))
 
-internal struct table keymap_table;
+#define internal static
+#define global   static
+
+global struct table keymap_table;
+global char **keymap_keys;
 
 internal char *
-copy_cf_string_to_c(CFStringRef string)
+copy_cfstring(CFStringRef string)
 {
-    CFStringEncoding encoding = kCFStringEncodingUTF8;
-    CFIndex length = CFStringGetLength(string);
-    CFIndex bytes = CFStringGetMaximumSizeForEncoding(length, encoding);
-    char *result = malloc(bytes + 1);
+    CFIndex num_bytes = CFStringGetMaximumSizeForEncoding(CFStringGetLength(string), kCFStringEncodingUTF8);
+    char *result = malloc(num_bytes + 1);
 
     // NOTE(koekeishiya): Boolean: typedef -> unsigned char; false = 0, true != 0
-    Boolean success = CFStringGetCString(string, result, bytes + 1, encoding);
-    if (!success) {
+    if (!CFStringGetCString(string, result, num_bytes + 1, kCFStringEncodingUTF8)) {
         free(result);
         result = NULL;
     }
@@ -51,43 +52,45 @@ same_keymap(const char *a, const char *b)
     return *a == '\0' && *b == '\0';
 }
 
-internal CFStringRef
-cfstring_from_keycode(UCKeyboardLayout *keyboard_layout, CGKeyCode keycode)
+internal void
+free_keycode_map(void)
 {
-    UInt32 dead_key_state = 0;
-    UniCharCount max_string_length = 255;
-    UniCharCount string_length = 0;
-    UniChar unicode_string[max_string_length];
-
-    OSStatus status = UCKeyTranslate(keyboard_layout, keycode,
-                                     kUCKeyActionDown, 0,
-                                     LMGetKbdType(), 0,
-                                     &dead_key_state,
-                                     max_string_length,
-                                     &string_length,
-                                     unicode_string);
-
-    if (string_length == 0 && dead_key_state) {
-        status = UCKeyTranslate(keyboard_layout, kVK_Space,
-                                kUCKeyActionDown, 0,
-                                LMGetKbdType(), 0,
-                                &dead_key_state,
-                                max_string_length,
-                                &string_length,
-                                unicode_string);
+    for (int i = 0; i < buf_len(keymap_keys); ++i) {
+        free(keymap_keys[i]);
     }
 
-    if (string_length > 0 && status == noErr) {
-        return CFStringCreateWithCharacters(NULL, unicode_string, string_length);
-    }
-
-    return NULL;
+    buf_free(keymap_keys);
+    keymap_keys = NULL;
 }
+
+internal uint32_t layout_dependent_keycodes[] =
+{
+    kVK_ANSI_A,            kVK_ANSI_B,           kVK_ANSI_C,
+    kVK_ANSI_D,            kVK_ANSI_E,           kVK_ANSI_F,
+    kVK_ANSI_G,            kVK_ANSI_H,           kVK_ANSI_I,
+    kVK_ANSI_J,            kVK_ANSI_K,           kVK_ANSI_L,
+    kVK_ANSI_M,            kVK_ANSI_N,           kVK_ANSI_O,
+    kVK_ANSI_P,            kVK_ANSI_Q,           kVK_ANSI_R,
+    kVK_ANSI_S,            kVK_ANSI_T,           kVK_ANSI_U,
+    kVK_ANSI_V,            kVK_ANSI_W,           kVK_ANSI_X,
+    kVK_ANSI_Y,            kVK_ANSI_Z,           kVK_ANSI_0,
+    kVK_ANSI_1,            kVK_ANSI_2,           kVK_ANSI_3,
+    kVK_ANSI_4,            kVK_ANSI_5,           kVK_ANSI_6,
+    kVK_ANSI_7,            kVK_ANSI_8,           kVK_ANSI_9,
+    kVK_ANSI_Grave,        kVK_ANSI_Equal,       kVK_ANSI_Minus,
+    kVK_ANSI_RightBracket, kVK_ANSI_LeftBracket, kVK_ANSI_Quote,
+    kVK_ANSI_Semicolon,    kVK_ANSI_Backslash,   kVK_ANSI_Comma,
+    kVK_ANSI_Slash,        kVK_ANSI_Period,      kVK_ISO_Section
+};
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"
-bool initialize_keycode_map()
+bool initialize_keycode_map(void)
 {
+    UniChar chars[255];
+    UniCharCount len;
+    UInt32 state;
+
     TISInputSourceRef keyboard = TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
     CFDataRef uchr = (CFDataRef) TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
     CFRelease(keyboard);
@@ -95,20 +98,33 @@ bool initialize_keycode_map()
     UCKeyboardLayout *keyboard_layout = (UCKeyboardLayout *) CFDataGetBytePtr(uchr);
     if (!keyboard_layout) return false;
 
+    free_keycode_map();
+    table_free(&keymap_table);
     table_init(&keymap_table,
-               131,
+               61,
                (table_hash_func) hash_keymap,
                (table_compare_func) same_keymap);
 
-    for (unsigned index = 0; index < 128; ++index) {
-        CFStringRef key_string = cfstring_from_keycode(keyboard_layout, index);
-        if (!key_string) continue;
+    for (int i = 0; i < array_count(layout_dependent_keycodes); ++i) {
+        if (UCKeyTranslate(keyboard_layout,
+                           layout_dependent_keycodes[i],
+                           kUCKeyActionDown,
+                           0,
+                           LMGetKbdType(),
+                           kUCKeyTranslateNoDeadKeysMask,
+                           &state,
+                           array_count(chars),
+                           &len,
+                           chars) == noErr && len > 0) {
+            CFStringRef key_cfstring = CFStringCreateWithCharacters(NULL, chars, len);
+            char *key_cstring = copy_cfstring(key_cfstring);
+            CFRelease(key_cfstring);
 
-        char *c_key_string = copy_cf_string_to_c(key_string);
-        CFRelease(key_string);
-        if (!c_key_string) continue;
-
-        table_add(&keymap_table, c_key_string, (void *)index);
+            if (key_cstring) {
+                table_add(&keymap_table, key_cstring, (void *)layout_dependent_keycodes[i]);
+                buf_push(keymap_keys, key_cstring);
+            }
+        }
     }
 
     return true;
