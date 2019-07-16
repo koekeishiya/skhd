@@ -78,7 +78,13 @@ Requires xcode-8 command-line tools.
 
 ### Configuration
 
-**skhd** will load the configuration file `$HOME/.skhdrc`, unless otherwise specified.
+The default configuration file is located at one of the following places (in order):
+
+ - `$XDG_CONFIG_HOME/skhd/skhdrc`
+ - `$HOME/.config/skhd/skhdrc`
+ - `$HOME/.skhdrc`
+
+A different location can be specified with the *--config | -c* argument.
 
 A sample config is available [here](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc)
 

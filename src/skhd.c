@@ -56,7 +56,7 @@ global struct mode *current_mode;
 global struct table mode_map;
 global struct table blacklst;
 global bool thwart_hotloader;
-global char *config_file;
+global char config_file[4096];
 
 internal HOTLOADER_CALLBACK(config_handler);
 
@@ -286,7 +286,7 @@ parse_arguments(int argc, char **argv)
             return true;
         } break;
         case 'c': {
-            config_file = copy_string(optarg);
+            snprintf(config_file, sizeof(config_file), "%s", optarg);
         } break;
         case 'h': {
             thwart_hotloader = true;
@@ -335,21 +335,39 @@ check_privileges(void)
     return result;
 }
 
-internal void
-use_default_config_path(void)
+internal inline bool
+file_exists(char *filename)
 {
-    char *home = getenv("HOME");
-    if (!home) {
-        error("skhd: could not locate config because 'env HOME' was not set! abort..\n");
+    struct stat buffer;
+
+    if (stat(filename, &buffer) != 0) {
+        return false;
     }
 
-    int home_len = strlen(home);
-    int config_len = strlen("/"SKHD_CONFIG_FILE);
-    int length = home_len + config_len;
-    config_file = malloc(length + 1);
-    memcpy(config_file, home, home_len);
-    memcpy(config_file + home_len, "/"SKHD_CONFIG_FILE, config_len);
-    config_file[length] = '\0';
+    if (buffer.st_mode & S_IFDIR) {
+        return false;
+    }
+
+    return true;
+}
+
+internal bool
+get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
+{
+    char *xdg_home = getenv("XDG_CONFIG_HOME");
+    if (xdg_home && *xdg_home) {
+        snprintf(buffer, buffer_size, "%s/skhd/%s", xdg_home, filename);
+        if (file_exists(buffer)) return true;
+    }
+
+    char *home = getenv("HOME");
+    if (!home) return false;
+
+    snprintf(buffer, buffer_size, "%s/.config/skhd/%s", home, filename);
+    if (file_exists(buffer)) return true;
+
+    snprintf(buffer, buffer_size, "%s/.%s", home, filename);
+    return file_exists(buffer);
 }
 
 internal void
@@ -407,8 +425,8 @@ int main(int argc, char **argv)
         error("skhd: could not initialize carbon events! abort..\n");
     }
 
-    if (!config_file) {
-        use_default_config_path();
+    if (config_file[0] == 0) {
+        get_config_file("skhdrc", config_file, sizeof(config_file));
     }
 
     CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),
