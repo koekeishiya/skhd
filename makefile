@@ -1,4 +1,4 @@
-FRAMEWORKS     = -framework Carbon -framework CoreAudio
+FRAMEWORKS     = -framework Carbon -framework CoreServices
 BUILD_PATH     = ./bin
 BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c

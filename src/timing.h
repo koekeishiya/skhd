@@ -2,7 +2,8 @@
 #define MACOS_TIMING_H
 
 #include <stdint.h>
-#include <CoreAudio/CoreAudio.h>
+#include <CoreServices/CoreServices.h>
+#include <mach/mach_time.h>
 
 #define BEGIN_SCOPED_TIMED_BLOCK(note) \
     do { \
@@ -28,7 +29,7 @@ struct timing_info
     char *note;
     uint64_t start;
     uint64_t end;
-    float ms;
+    double ms;
 };
 
 void begin_timing(struct timing_info *timing, char *note);
@@ -37,22 +38,31 @@ void end_timing(struct timing_info *timing);
 internal inline uint64_t
 macos_get_wall_clock(void)
 {
-    uint64_t result = AudioConvertHostTimeToNanos(AudioGetCurrentHostTime());
-    return result;
+    return mach_absolute_time();
 }
 
-internal inline float
-macos_get_seconds_elapsed(uint64_t start, uint64_t end)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+static inline uint64_t macos_get_nanoseconds_elapsed(uint64_t start, uint64_t end)
 {
-    float result = ((float)(end - start) / 1000.0f) / 1000000.0f;
-    return result;
+    uint64_t elapsed = end - start;
+    Nanoseconds nano = AbsoluteToNanoseconds(*(AbsoluteTime *) &elapsed);
+    return *(uint64_t *) &nano;
 }
+#pragma clang diagnostic pop
 
-internal inline float
+internal inline double
 macos_get_milliseconds_elapsed(uint64_t start, uint64_t end)
 {
-    float result = 1000.0f * macos_get_seconds_elapsed(start, end);
-    return result;
+    uint64_t ns = macos_get_nanoseconds_elapsed(start, end);
+    return (double)(ns / 1000000.0);
+}
+
+internal inline double
+macos_get_seconds_elapsed(uint64_t start, uint64_t end)
+{
+    uint64_t ns = macos_get_nanoseconds_elapsed(start, end);
+    return (double)(ns / 1000000000.0);
 }
 
 void begin_timing(struct timing_info *timing, char *note) {
