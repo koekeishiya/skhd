@@ -81,9 +81,9 @@ The default configuration file is located at one of the following places (in ord
 
 A different location can be specified with the ```--config | -c``` argument.
 
-A sample config is available [here](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc).
+A sample config is available [here](https://github.com/Nobody912/skhd/blob/master/examples/skhdrc).
 
-A list of all built-in modifier and literal keywords can be found [here](https://github.com/Nobody912/skhdrc/KEYS.md).
+A list of all built-in modifier and literal keywords can be found [here](https://github.com/Nobody912/skhd/blob/master/KEYS.md).
 
 A hotkey is written according to the following rules:
 
