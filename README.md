@@ -83,7 +83,7 @@ A different location can be specified with the ```--config | -c``` argument.
 
 A sample config is available [here](https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc).
 
-A list of all built-in modifier and literal keywords can be found [here](https://github.com/Nobody912/skhdrc/KEYWORDS.md).
+A list of all built-in modifier and literal keywords can be found [here](https://github.com/Nobody912/skhdrc/KEYS.md).
 
 A hotkey is written according to the following rules:
 
