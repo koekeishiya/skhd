@@ -9,15 +9,15 @@ Feature comparison between **skhd** and **khd**:
 
 | feature                    | skhd | khd |
 |:--------------------------:|:----:|:---:|
-| hotload config file        | [✓]  | [✗] |
-| hotkey passthrough         | [✓]  | [✓] |
-| modal hotkey-system        | [✓]  | [✓] |
-| application specific hotkey| [✓]  | [✓] |
-| blacklist applications     | [✓]  | [✗] |
-| use media-keys as hotkey   | [✓]  | [✗] |
-| modifier only hotkey       | [✗]  | [✓] |
-| caps-lock as hotkey        | [✗]  | [✓] |
-| mouse-buttons as hotkey    | [✗]  | [✓] |
+| hotload config file        | - [x]  | - [ ] |
+| hotkey passthrough         | - [x]  | - [x] |
+| modal hotkey-system        | - [x]  | - [x] |
+| application specific hotkey| - [x]  | - [x] |
+| blacklist applications     | - [x]  | - [ ] |
+| use media-keys as hotkey   | - [x]  | - [ ] |
+| modifier only hotkey       | - [ ]  | - [x] |
+| caps-lock as hotkey        | - [ ]  | - [x] |
+| mouse-buttons as hotkey    | - [ ]  | - [x] |
 
 ### Install
 
