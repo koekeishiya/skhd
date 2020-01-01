@@ -23,6 +23,7 @@ find_or_init_default_mode(struct parser *parser)
 
     default_mode = malloc(sizeof(struct mode));
     default_mode->name = copy_string("default");
+    default_mode->initialized = false;
 
     table_init(&default_mode->hotkey_map, 131,
                (table_hash_func) hash_hotkey,
@@ -348,6 +349,7 @@ parse_mode_decl(struct parser *parser)
     struct token identifier = parser_previous(parser);
 
     mode->name = copy_string_count(identifier.text, identifier.length);
+    mode->initialized = true;
 
     table_init(&mode->hotkey_map, 131,
                (table_hash_func) hash_hotkey,
@@ -374,8 +376,20 @@ void parse_declaration(struct parser *parser)
     if (parser_match(parser, Token_Identifier)) {
         struct token identifier = parser_previous(parser);
         struct mode *mode = parse_mode_decl(parser);
-        if (table_find(parser->mode_map, mode->name)) {
-            parser_report_error(parser, identifier, "duplicate declaration '%s'\n", mode->name);
+
+        struct mode *existing_mode = table_find(parser->mode_map, mode->name);
+        if  (existing_mode) {
+            if (same_string(existing_mode->name, "default") && !existing_mode->initialized) {
+                existing_mode->initialized = true;
+                existing_mode->capture = mode->capture;
+                existing_mode->command = mode->command;
+            } else {
+                parser_report_error(parser, identifier, "duplicate declaration '%s'\n", mode->name);
+                if (mode->command) free(mode->command);
+            }
+
+            free(mode->name);
+            free(mode);
         } else {
             table_add(parser->mode_map, mode->name, mode);
         }

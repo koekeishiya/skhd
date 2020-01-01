@@ -64,6 +64,7 @@ struct mode
     char *name;
     char *command;
     bool capture;
+    bool initialized;
     struct table hotkey_map;
 };
 
