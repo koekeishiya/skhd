@@ -1,26 +1,23 @@
 [![Build Status](https://travis-ci.org/koekeishiya/skhd.svg?branch=master)](https://travis-ci.org/koekeishiya/skhd)
 
-**skhd** is a simple hotkey daemon for macOS. It is a stripped version of [**khd** (*no longer maintained*)](https://github.com/koekeishiya/khd)
-(although rewritten from scratch), that sacrifices the more advanced features in favour of increased responsiveness and performance.
-**skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
+**skhd** is a simple hotkey daemon for macOS that focuses on responsiveness and performance.
+Hotkeys are defined in a text file through a simple DSL. **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
 **skhd** uses a pid-file to make sure that only one instance is running at any moment in time. This also allows for the ability to trigger
 a manual reload of the config file by invoking `skhd --reload` at any time while an instance of **skhd** is running. The pid-file is saved
 as `/tmp/skhd_$USER.pid` and so the user that is running **skhd** must have write permission to said path.
 
-feature comparison between **skhd** and **khd**
+list of features
 
-| feature                    | skhd | khd |
-|:--------------------------:|:----:|:---:|
-| hotload config file        | [x]  | [ ] |
-| hotkey passthrough         | [x]  | [x] |
-| modal hotkey-system        | [x]  | [x] |
-| application specific hotkey| [x]  | [x] |
-| blacklist applications     | [x]  | [ ] |
-| use media-keys as hotkey   | [x]  | [ ] |
-| modifier only hotkey       | [ ]  | [x] |
-| caps-lock as hotkey        | [ ]  | [x] |
-| mouse-buttons as hotkey    | [ ]  | [x] |
+| feature                    | skhd |
+|:--------------------------:|:----:|
+| hotload config file        | [x]  |
+| hotkey passthrough         | [x]  |
+| modal hotkey-system        | [x]  |
+| application specific hotkey| [x]  |
+| blacklist applications     | [x]  |
+| use media-keys as hotkey   | [x]  |
+| synthesize a key-press     | [x]  |
 
 ### Install
 
