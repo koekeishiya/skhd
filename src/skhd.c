@@ -39,7 +39,6 @@
 #include "notify.c"
 
 extern void NSApplicationLoad(void);
-extern int CGSMainConnectionID(void);
 extern CFDictionaryRef CGSCopyCurrentSessionDictionary(void);
 extern bool CGSIsSecureEventInputSet(void);
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
@@ -66,7 +65,6 @@ global struct table mode_map;
 global struct table blacklst;
 global bool thwart_hotloader;
 global char config_file[4096];
-global int connection;
 
 internal HOTLOADER_CALLBACK(config_handler);
 
@@ -383,20 +381,19 @@ get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
 internal char *
 secure_keyboard_entry_process_info(pid_t *pid)
 {
-    CFDictionaryRef session;
-    CFNumberRef pid_ref;
+    char *process_name = NULL;
 
-    session = CGSCopyCurrentSessionDictionary();
-    if (!session) goto err;
+    CFDictionaryRef session = CGSCopyCurrentSessionDictionary();
+    if (!session) return NULL;
 
-    pid_ref = (CFNumberRef) CFDictionaryGetValue(session, CFSTR("kCGSSessionSecureInputPID"));
-    if (!pid_ref) goto err;
+    CFNumberRef pid_ref = (CFNumberRef) CFDictionaryGetValue(session, CFSTR("kCGSSessionSecureInputPID"));
+    if (pid_ref) {
+        CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), pid);
+        process_name = find_process_name_for_pid(*pid);
+    }
 
-    CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), pid);
-    return find_process_name_for_pid(*pid);
-
-err:
-    return NULL;
+    CFRelease(session);
+    return process_name;
 }
 
 internal void
@@ -413,22 +410,26 @@ dump_secure_keyboard_entry_process_info(void)
 
 static GLOBAL_CONNECTION_CALLBACK(connection_handler)
 {
-    pid_t pid;
-    char *process_name = secure_keyboard_entry_process_info(&pid);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        pid_t pid;
+        char *process_name = secure_keyboard_entry_process_info(&pid);
 
-    if (type == 752) {
-        if (process_name) {
-            notify("Secure Keyboard Entry", "Enabled by '%s' (%d)", process_name, pid);
-        } else {
-            notify("Secure Keyboard Entry", "Enabled by unknown application..");
+        if (type == 752) {
+            if (process_name) {
+                notify("Secure Keyboard Entry", "Enabled by '%s' (%d)", process_name, pid);
+            } else {
+                notify("Secure Keyboard Entry", "Enabled by unknown application..");
+            }
+        } else if (type == 753) {
+            if (process_name) {
+                notify("Secure Keyboard Entry", "Disabled by '%s' (%d)", process_name, pid);
+            } else {
+                notify("Secure Keyboard Entry", "Disabled by unknown application..");
+            }
         }
-    } else if (type == 753) {
-        if (process_name) {
-            notify("Secure Keyboard Entry", "Disabled by '%s' (%d)", process_name, pid);
-        } else {
-            notify("Secure Keyboard Entry", "Disabled by unknown application..");
-        }
-    }
+
+        if (process_name) free(process_name);
+    });
 }
 
 int main(int argc, char **argv)
@@ -465,12 +466,6 @@ int main(int argc, char **argv)
         get_config_file("skhdrc", config_file, sizeof(config_file));
     }
 
-    NSApplicationLoad();
-    notify_init();
-    connection = CGSMainConnectionID();
-    CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
-    CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
-
     CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),
                                     NULL,
                                     &keymap_handler,
@@ -496,6 +491,11 @@ int main(int argc, char **argv)
     event_tap_begin(&event_tap, key_handler);
     END_SCOPED_TIMED_BLOCK();
     END_SCOPED_TIMED_BLOCK();
+
+    NSApplicationLoad();
+    notify_init();
+    CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
+    CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
