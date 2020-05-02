@@ -11,6 +11,8 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <objc/objc-runtime.h>
 
 #include "timing.h"
 #include "log.h"
@@ -34,10 +36,17 @@
 #include "parse.c"
 #include "hotkey.c"
 #include "synthesize.c"
+#include "notify.c"
 
+extern void NSApplicationLoad(void);
+extern int CGSMainConnectionID(void);
 extern CFDictionaryRef CGSCopyCurrentSessionDictionary(void);
 extern bool CGSIsSecureEventInputSet(void);
 #define secure_keyboard_entry_enabled CGSIsSecureEventInputSet
+
+#define GLOBAL_CONNECTION_CALLBACK(name) void name(uint32_t type, void *data, size_t data_length, void *context)
+typedef GLOBAL_CONNECTION_CALLBACK(global_connection_callback);
+extern CGError CGSRegisterNotifyProc(void *handler, uint32_t type, void *context);
 
 #define internal static
 #define global   static
@@ -57,8 +66,18 @@ global struct table mode_map;
 global struct table blacklst;
 global bool thwart_hotloader;
 global char config_file[4096];
+global int connection;
 
 internal HOTLOADER_CALLBACK(config_handler);
+
+static GLOBAL_CONNECTION_CALLBACK(connection_handler)
+{
+    if (type == 752) {
+        notify("skhd", "Secure Keyboard Entry was enabled!");
+    } else if (type == 753) {
+        notify("skhd", "Secure Keyboard Entry was disabled..");
+    }
+}
 
 internal void
 parse_config_helper(char *absolutepath)
@@ -428,6 +447,12 @@ int main(int argc, char **argv)
     if (config_file[0] == 0) {
         get_config_file("skhdrc", config_file, sizeof(config_file));
     }
+
+    NSApplicationLoad();
+    notify_init();
+    connection = CGSMainConnectionID();
+    CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
+    CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
 
     CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),
                                     NULL,
