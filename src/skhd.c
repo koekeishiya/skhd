@@ -70,15 +70,6 @@ global int connection;
 
 internal HOTLOADER_CALLBACK(config_handler);
 
-static GLOBAL_CONNECTION_CALLBACK(connection_handler)
-{
-    if (type == 752) {
-        notify("skhd", "Secure Keyboard Entry was enabled!");
-    } else if (type == 753) {
-        notify("skhd", "Secure Keyboard Entry was disabled..");
-    }
-}
-
 internal void
 parse_config_helper(char *absolutepath)
 {
@@ -389,13 +380,11 @@ get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
     return file_exists(buffer);
 }
 
-internal void
-dump_secure_keyboard_entry_process_info(void)
+internal char *
+secure_keyboard_entry_process_info(pid_t *pid)
 {
     CFDictionaryRef session;
     CFNumberRef pid_ref;
-    char *process_name;
-    pid_t pid;
 
     session = CGSCopyCurrentSessionDictionary();
     if (!session) goto err;
@@ -403,15 +392,43 @@ dump_secure_keyboard_entry_process_info(void)
     pid_ref = (CFNumberRef) CFDictionaryGetValue(session, CFSTR("kCGSSessionSecureInputPID"));
     if (!pid_ref) goto err;
 
-    CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), &pid);
-    process_name = find_process_name_for_pid(pid);
-
-    if (process_name) {
-        error("skhd: secure keyboard entry is enabled by (%lld) '%s'! abort..\n", pid, process_name);
-    }
+    CFNumberGetValue(pid_ref, CFNumberGetType(pid_ref), pid);
+    return find_process_name_for_pid(*pid);
 
 err:
-    error("skhd: secure keyboard entry is enabled! abort..\n");
+    return NULL;
+}
+
+internal void
+dump_secure_keyboard_entry_process_info(void)
+{
+    pid_t pid;
+    char *process_name = secure_keyboard_entry_process_info(&pid);
+    if (process_name) {
+        error("skhd: secure keyboard entry is enabled by (%lld) '%s'! abort..\n", pid, process_name);
+    } else {
+        error("skhd: secure keyboard entry is enabled! abort..\n");
+    }
+}
+
+static GLOBAL_CONNECTION_CALLBACK(connection_handler)
+{
+    pid_t pid;
+    char *process_name = secure_keyboard_entry_process_info(&pid);
+
+    if (type == 752) {
+        if (process_name) {
+            notify("Secure Keyboard Entry", "Enabled by '%s' (%d)", process_name, pid);
+        } else {
+            notify("Secure Keyboard Entry", "Enabled by unknown application..");
+        }
+    } else if (type == 753) {
+        if (process_name) {
+            notify("Secure Keyboard Entry", "Disabled by '%s' (%d)", process_name, pid);
+        } else {
+            notify("Secure Keyboard Entry", "Disabled by unknown application..");
+        }
+    }
 }
 
 int main(int argc, char **argv)
