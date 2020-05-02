@@ -6,18 +6,24 @@ void notify_init(void)
                         NULL);
 }
 
-void notify(char *title, char *message)
+void notify(const char *subtitle, const char *format, ...)
 {
-    CFStringRef title_ref = CFStringCreateWithCString(NULL, title, kCFStringEncodingUTF8);
-    CFStringRef message_ref = CFStringCreateWithCString(NULL, message, kCFStringEncodingUTF8);
+    va_list args;
+    va_start(args, format);
+    CFStringRef format_ref = CFStringCreateWithCString(NULL, format, kCFStringEncodingUTF8);
+    CFStringRef subtitle_ref = CFStringCreateWithCString(NULL, subtitle, kCFStringEncodingUTF8);
+    CFStringRef message_ref = CFStringCreateWithFormatAndArguments(NULL, NULL, format_ref, args);
+    va_end(args);
 
     void *center = objc_msgSend((void *) objc_getClass("NSUserNotificationCenter"), sel_registerName("defaultUserNotificationCenter"));
     void *notification = objc_msgSend((void *) objc_getClass("NSUserNotification"), sel_registerName("alloc"), sel_registerName("init"));
 
-    objc_msgSend(notification, sel_registerName("setTitle:"), title_ref);
+    objc_msgSend(notification, sel_registerName("setTitle:"), CFSTR("skhd"));
+    objc_msgSend(notification, sel_registerName("setSubtitle:"), subtitle_ref);
     objc_msgSend(notification, sel_registerName("setInformativeText:"), message_ref);
     objc_msgSend(center, sel_registerName("deliverNotification:"), notification);
 
     CFRelease(message_ref);
-    CFRelease(title_ref);
+    CFRelease(subtitle_ref);
+    CFRelease(format_ref);
 }
