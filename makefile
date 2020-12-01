@@ -1,6 +1,6 @@
 FRAMEWORKS     = -framework Cocoa -framework Carbon -framework CoreServices
 BUILD_PATH     = ./bin
-BUILD_FLAGS    = -std=c99 -Wall -g -O0 -DOBJC_OLD_DISPATCH_PROTOTYPES=1
+BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c
 BINS           = $(BUILD_PATH)/skhd
 
@@ -8,7 +8,7 @@ BINS           = $(BUILD_PATH)/skhd
 
 all: clean $(BINS)
 
-install: BUILD_FLAGS=-std=c99 -Wall -O2 -DOBJC_OLD_DISPATCH_PROTOTYPES=1
+install: BUILD_FLAGS=-std=c99 -Wall -O2
 install: clean $(BINS)
 
 clean:
