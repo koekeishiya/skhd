@@ -267,6 +267,7 @@ internal bool
 parse_arguments(int argc, char **argv)
 {
     int option;
+    char synthesize_opt = 0;
     const char *short_option = "VPvc:k:t:rho";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
@@ -282,6 +283,9 @@ parse_arguments(int argc, char **argv)
     };
 
     while ((option = getopt_long(argc, argv, short_option, long_option, NULL)) != -1) {
+        if (synthesize_opt != 0 && option != synthesize_opt) {
+            error("skhd: cannot pass arguments after -%c", synthesize_opt);
+        }
         switch (option) {
         case 'V': {
             verbose = true;
@@ -301,11 +305,11 @@ parse_arguments(int argc, char **argv)
         } break;
         case 'k': {
             synthesize_key(optarg);
-            return true;
+            synthesize_opt = option;
         } break;
         case 't': {
             synthesize_text(optarg);
-            return true;
+            synthesize_opt = option;
         } break;
         case 'r': {
             pid_t pid = read_pid_file();
@@ -319,6 +323,10 @@ parse_arguments(int argc, char **argv)
             CFRunLoopRun();
         } break;
         }
+    }
+
+    if (synthesize_opt != 0) {
+        return true;
     }
 
     return false;
