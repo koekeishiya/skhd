@@ -25,7 +25,8 @@ global const char *literal_keycode_str[] =
     "f10",             "f11",             "f12",
     "f13",             "f14",             "f15",
     "f16",             "f17",             "f18",
-    "f19",             "f20",
+    "f19",             "f20",             "f21",
+    "f22",             "f23",             "f24",
 
     "sound_up",        "sound_down",      "mute",
     "play",            "previous",        "next",

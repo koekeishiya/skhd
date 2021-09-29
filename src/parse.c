@@ -168,7 +168,8 @@ internal uint32_t literal_keycode_value[] =
     kVK_F10,        kVK_F11,           kVK_F12,
     kVK_F13,        kVK_F14,           kVK_F15,
     kVK_F16,        kVK_F17,           kVK_F18,
-    kVK_F19,        kVK_F20,
+    kVK_F19,        kVK_F20,           kVK_F21,
+    kVK_F22,        kVK_F23,           kVK_F24,
 
     NX_KEYTYPE_SOUND_UP,        NX_KEYTYPE_SOUND_DOWN,      NX_KEYTYPE_MUTE,
     NX_KEYTYPE_PLAY,            NX_KEYTYPE_PREVIOUS,        NX_KEYTYPE_NEXT,
