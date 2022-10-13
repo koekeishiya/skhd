@@ -9,7 +9,8 @@ global const char *modifier_flags_str[] =
     "shift", "lshift",  "rshift",
     "cmd",   "lcmd",    "rcmd",
     "ctrl",  "lctrl",   "rctrl",
-    "fn",    "hyper",   "meh",
+    "fn",    "hyper",   "lhyper",
+    "rhyper","meh",
 };
 
 global const char *literal_keycode_str[] =
