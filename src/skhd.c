@@ -166,7 +166,10 @@ internal EVENT_TAP_CALLBACK(key_handler)
         struct event_tap *event_tap = (struct event_tap *) reference;
         CGEventTapEnable(event_tap->handle, 1);
     } break;
-    case kCGEventKeyDown: {
+    case kCGEventKeyDown:
+    case kCGEventLeftMouseDown:
+    case kCGEventRightMouseDown:
+    case kCGEventOtherMouseDown: {
         if (table_find(&blacklst, carbon.process_name)) return event;
         if (!current_mode) return event;
 
@@ -495,7 +498,11 @@ int main(int argc, char **argv)
     END_SCOPED_TIMED_BLOCK();
 
     BEGIN_SCOPED_TIMED_BLOCK("begin_eventtap");
-    event_tap.mask = (1 << kCGEventKeyDown) | (1 << NX_SYSDEFINED);
+    event_tap.mask = (1 << kCGEventKeyDown) |
+                     (1 << NX_SYSDEFINED) |
+                     (1 << kCGEventLeftMouseDown) |
+                     (1 << kCGEventRightMouseDown) |
+                     (1 << kCGEventOtherMouseDown);
     event_tap_begin(&event_tap, key_handler);
     END_SCOPED_TIMED_BLOCK();
     END_SCOPED_TIMED_BLOCK();
