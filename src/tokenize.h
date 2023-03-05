@@ -33,6 +33,21 @@ global const char *literal_keycode_str[] =
     "brightness_down", "illumination_up", "illumination_down"
 };
 
+global const char *mouse_button_str[] =
+{
+    "mouse_left",      "mouse_right",     "mouse_center",
+    "m3",              "m4",              "m5",
+    "m6",              "m7",              "m8",
+    "m9",              "m10",             "m11",
+    "m12",             "m13",             "m14",
+    "m15",             "m16",             "m17",
+    "m18",             "m19",             "m20",
+    "m21",             "m22",             "m23",
+    "m24",             "m25",             "m26",
+    "m27",             "m28",             "m29",
+    "m30",             "m31"
+};
+
 #undef global
 
 enum token_type
@@ -45,6 +60,7 @@ enum token_type
     Token_Literal,
     Token_Key_Hex,
     Token_Key,
+    Token_Button,
 
     Token_Decl,
     Token_Comma,

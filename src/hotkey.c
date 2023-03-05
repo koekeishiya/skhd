@@ -294,7 +294,6 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey)
 
     bool result = ((key_state == NX_KEYDOWN) &&
                    (key_stype == NX_SUBTYPE_AUX_CONTROL_BUTTONS));
-
     if (result) {
         eventkey->key = key_code;
         eventkey->flags = cgevent_flags_to_hotkey_flags(CGEventGetFlags(event)) | Hotkey_Flag_NX;
