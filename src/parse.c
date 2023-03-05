@@ -291,6 +291,7 @@ parse_hotkey(struct parser *parser)
 {
     struct hotkey *hotkey = malloc(sizeof(struct hotkey));
     memset(hotkey, 0, sizeof(struct hotkey));
+    hotkey->button = -1;
     bool found_modifier;
 
     debug("hotkey :: #%d {\n", parser->current_token.line);
@@ -540,6 +541,7 @@ parse_keypress(struct parser *parser)
         (parser_check(parser, Token_Button))) {
         struct hotkey *hotkey = malloc(sizeof(struct hotkey));
         memset(hotkey, 0, sizeof(struct hotkey));
+        hotkey->button = -1;
         bool found_modifier;
 
         if ((found_modifier = parser_match(parser, Token_Modifier))) {
