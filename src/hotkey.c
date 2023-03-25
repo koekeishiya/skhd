@@ -1,4 +1,5 @@
 #include "hotkey.h"
+#include "synthesize.h"
 
 #define internal static
 #define global   static
@@ -167,6 +168,10 @@ bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, st
 {
     uint32_t c = MODE_CAPTURE((int)(*m)->capture);
     for (struct hotkey *h = find_hotkey(*m, k, &c); h; passthrough(h, &c), h = 0) {
+        if (h->forwarded_hotkey) {
+            synthesize_forward_hotkey(h->forwarded_hotkey);
+            continue;
+        }
         char *cmd = h->command[0];
         if (has_flags(h, Hotkey_Flag_Activate)) {
             *m = table_find(t, cmd);
@@ -212,6 +217,7 @@ void free_mode_map(struct table *mode_map)
             }
             buf_free(hotkey->command);
 
+            if (hotkey->forwarded_hotkey) free(hotkey->forwarded_hotkey);
             free(hotkey);
 next:;
         }
