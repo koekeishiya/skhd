@@ -1,5 +1,4 @@
 #include "hotkey.h"
-#include "synthesize.h"
 
 #define internal static
 #define global   static
@@ -164,14 +163,38 @@ find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct ca
     return result;
 }
 
+bool find_and_forward_hotkey(struct hotkey *k, struct mode *m, CGEventRef event)
+{
+    struct hotkey *found = table_find(&m->hotkey_map, k);
+    if (!found || !found->forwarded_hotkey) return false;
+    debug("forwarding hotkey\n");
+    struct hotkey *forwarded = found->forwarded_hotkey;
+
+    int flags = 0;
+    if (has_flags(forwarded, Hotkey_Flag_Alt)) {
+        flags |= kCGEventFlagMaskAlternate;
+    }
+    if (has_flags(forwarded, Hotkey_Flag_Shift)) {
+        flags |= kCGEventFlagMaskShift;
+    }
+    if (has_flags(forwarded, Hotkey_Flag_Cmd)) {
+        flags |= kCGEventFlagMaskCommand;
+    }
+    if (has_flags(forwarded, Hotkey_Flag_Control)) {
+        flags |= kCGEventFlagMaskControl;
+    }
+    if (has_flags(forwarded, Hotkey_Flag_Fn)) {
+        flags |= kCGEventFlagMaskSecondaryFn;
+    }
+    CGEventSetFlags(event, flags);
+    CGEventSetIntegerValueField(event, kCGKeyboardEventKeycode, forwarded->key);
+    return true;
+}
+
 bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon)
 {
     uint32_t c = MODE_CAPTURE((int)(*m)->capture);
     for (struct hotkey *h = find_hotkey(*m, k, &c); h; passthrough(h, &c), h = 0) {
-        if (h->forwarded_hotkey) {
-            synthesize_forward_hotkey(h->forwarded_hotkey);
-            continue;
-        }
         char *cmd = h->command[0];
         if (has_flags(h, Hotkey_Flag_Activate)) {
             *m = table_find(t, cmd);

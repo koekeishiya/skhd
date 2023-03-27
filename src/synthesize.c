@@ -63,40 +63,6 @@ void synthesize_key(char *key_string)
     synthesize_modifiers(hotkey, false);
 }
 
-void synthesize_forward_hotkey(struct hotkey *hotkey)
-{
-    CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
-    CGEventSourceSetUserData(source, SHKD_CGEVENT_USER_DATA);
-
-    CGEventRef de = CGEventCreateKeyboardEvent(source, hotkey->key, true);
-    CGEventRef ue = CGEventCreateKeyboardEvent(source, hotkey->key, false);
-
-    int flags = 0;
-    if (has_flags(hotkey, Hotkey_Flag_Alt)) {
-        flags |= kCGEventFlagMaskAlternate;
-    }
-    if (has_flags(hotkey, Hotkey_Flag_Shift)) {
-        flags |= kCGEventFlagMaskShift;
-    }
-    if (has_flags(hotkey, Hotkey_Flag_Cmd)) {
-        flags |= kCGEventFlagMaskCommand;
-    }
-    if (has_flags(hotkey, Hotkey_Flag_Control)) {
-        flags |= kCGEventFlagMaskControl;
-    }
-    if (has_flags(hotkey, Hotkey_Flag_Fn)) {
-        flags |= kCGEventFlagMaskSecondaryFn;
-    }
-    CGEventSetFlags(de, flags);
-
-    CGEventPost(kCGSessionEventTap, de);
-    CGEventPost(kCGSessionEventTap, ue);
-
-    CFRelease(ue);
-    CFRelease(de);
-    CFRelease(source);
-}
-
 void synthesize_text(char *text)
 {
     CFStringRef text_ref = CFStringCreateWithCString(NULL, text, kCFStringEncodingUTF8);
