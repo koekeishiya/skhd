@@ -1,11 +1,10 @@
-[![Build Status](https://travis-ci.org/koekeishiya/skhd.svg?branch=master)](https://travis-ci.org/koekeishiya/skhd)
-
 **skhd** is a simple hotkey daemon for macOS that focuses on responsiveness and performance.
 Hotkeys are defined in a text file through a simple DSL. **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
 **skhd** uses a pid-file to make sure that only one instance is running at any moment in time. This also allows for the ability to trigger
 a manual reload of the config file by invoking `skhd --reload` at any time while an instance of **skhd** is running. The pid-file is saved
 as `/tmp/skhd_$USER.pid` and so the user that is running **skhd** must have write permission to said path.
+When running as a service (through launchd) log files can be found at `/tmp/skhd_$USER.out.log` and `/tmp/skhd_$USER.err.log`.
 
 list of features
 
@@ -32,7 +31,7 @@ After access has been granted, the application must be restarted.
 Requires xcode-8 command-line tools.
 
       brew install koekeishiya/formulae/skhd
-      brew services start skhd
+      skhd --start-service
 
 **Source**:
 
@@ -45,6 +44,21 @@ Requires xcode-8 command-line tools.
 ### Usage
 
 ```
+--install-service: Install launchd service file into ~/Library/LaunchAgents/com.koekeishiya.skhd.plist
+    skhd --install-service
+
+--uninstall-service: Remove launchd service file ~/Library/LaunchAgents/com.koekeishiya.skhd.plist
+    skhd --uninstall-service
+
+--start-service: Run skhd as a service through launchd
+    skhd --start-service
+
+--restart-service: Restart skhd service
+    skhd --restart-service
+
+--stop-service: Stop skhd service from running
+    skhd --stop-service
+
 -V | --verbose: Output debug information
     skhd -V
 
