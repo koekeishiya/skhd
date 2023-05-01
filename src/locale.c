@@ -6,14 +6,10 @@
 
 #define array_count(a) (sizeof((a)) / sizeof(*(a)))
 
-#define internal static
-#define global   static
+static struct table keymap_table;
+static char **keymap_keys;
 
-global struct table keymap_table;
-global char **keymap_keys;
-
-internal char *
-copy_cfstring(CFStringRef string)
+static char *copy_cfstring(CFStringRef string)
 {
     CFIndex num_bytes = CFStringGetMaximumSizeForEncoding(CFStringGetLength(string), kCFStringEncodingUTF8);
     char *result = malloc(num_bytes + 1);
@@ -27,8 +23,7 @@ copy_cfstring(CFStringRef string)
     return result;
 }
 
-internal int
-hash_keymap(const char *a)
+static int hash_keymap(const char *a)
 {
     unsigned long hash = 0, high;
     while (*a) {
@@ -42,8 +37,7 @@ hash_keymap(const char *a)
     return hash;
 }
 
-internal bool
-same_keymap(const char *a, const char *b)
+static bool same_keymap(const char *a, const char *b)
 {
     while (*a && *b && *a == *b) {
         ++a;
@@ -52,8 +46,7 @@ same_keymap(const char *a, const char *b)
     return *a == '\0' && *b == '\0';
 }
 
-internal void
-free_keycode_map(void)
+static void free_keycode_map(void)
 {
     for (int i = 0; i < buf_len(keymap_keys); ++i) {
         free(keymap_keys[i]);
@@ -63,7 +56,7 @@ free_keycode_map(void)
     keymap_keys = NULL;
 }
 
-internal uint32_t layout_dependent_keycodes[] =
+static uint32_t layout_dependent_keycodes[] =
 {
     kVK_ANSI_A,            kVK_ANSI_B,           kVK_ANSI_C,
     kVK_ANSI_D,            kVK_ANSI_E,           kVK_ANSI_F,
@@ -134,6 +127,6 @@ bool initialize_keycode_map(void)
 uint32_t keycode_from_char(char key)
 {
     char lookup_key[] = { key, '\0' };
-    uint32_t keycode = (uint32_t) table_find(&keymap_table, &lookup_key);
+    uint32_t keycode = (uint32_t) (uintptr_t) table_find(&keymap_table, &lookup_key);
     return keycode;
 }

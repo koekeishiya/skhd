@@ -5,18 +5,16 @@
 #include "parse.h"
 #include "hotkey.h"
 
-#define internal static
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
 
-internal inline void
+static inline void
 create_and_post_keyevent(uint16_t key, bool pressed)
 {
     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)key, pressed);
 }
 
-internal inline void
+static inline void
 synthesize_modifiers(struct hotkey *hotkey, bool pressed)
 {
     if (has_flags(hotkey, Hotkey_Flag_Alt)) {

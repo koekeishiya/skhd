@@ -1,7 +1,6 @@
 #include "tokenize.h"
 #include <ctype.h>
 
-#define internal static
 #define array_count(a) (sizeof((a)) / sizeof(*(a)))
 
 int token_equals(struct token token, const char *match)
@@ -15,7 +14,7 @@ int token_equals(struct token token, const char *match)
     return (*at == 0);
 }
 
-internal void
+static void
 advance(struct tokenizer *tokenizer)
 {
     if (*tokenizer->at == '\n') {
@@ -26,7 +25,7 @@ advance(struct tokenizer *tokenizer)
     ++tokenizer->at;
 }
 
-internal void
+static void
 eat_whitespace(struct tokenizer *tokenizer)
 {
     while (*tokenizer->at && isspace(*tokenizer->at)) {
@@ -34,7 +33,7 @@ eat_whitespace(struct tokenizer *tokenizer)
     }
 }
 
-internal void
+static void
 eat_comment(struct tokenizer *tokenizer)
 {
     while (*tokenizer->at && *tokenizer->at != '\n') {
@@ -42,7 +41,7 @@ eat_comment(struct tokenizer *tokenizer)
     }
 }
 
-internal void
+static void
 eat_command(struct tokenizer *tokenizer)
 {
     while (*tokenizer->at && *tokenizer->at != '\n') {
@@ -53,7 +52,7 @@ eat_command(struct tokenizer *tokenizer)
     }
 }
 
-internal void
+static void
 eat_hex(struct tokenizer *tokenizer)
 {
     while ((*tokenizer->at) &&
@@ -63,7 +62,7 @@ eat_hex(struct tokenizer *tokenizer)
     }
 }
 
-internal void
+static void
 eat_string(struct tokenizer *tokenizer)
 {
     /*
@@ -79,7 +78,7 @@ eat_string(struct tokenizer *tokenizer)
     }
 }
 
-internal void
+static void
 eat_option(struct tokenizer *tokenizer)
 {
     while (*tokenizer->at && !isspace(*tokenizer->at)) {
@@ -87,13 +86,13 @@ eat_option(struct tokenizer *tokenizer)
     }
 }
 
-internal inline bool
+static inline bool
 isidentifier(char c)
 {
     return isalpha(c) || c == '_';
 }
 
-internal void
+static void
 eat_identifier(struct tokenizer *tokenizer)
 {
     while ((*tokenizer->at) && isidentifier(*tokenizer->at)) {
@@ -105,7 +104,7 @@ eat_identifier(struct tokenizer *tokenizer)
     }
 }
 
-internal enum token_type
+static enum token_type
 resolve_identifier_type(struct token token)
 {
     if (token.length == 1) {

@@ -1,8 +1,5 @@
 #include "hotkey.h"
 
-#define internal static
-#define global   static
-
 #define HOTKEY_FOUND           ((1) << 0)
 #define MODE_CAPTURE(a)        ((a) << 1)
 #define HOTKEY_PASSTHROUGH(a)  ((a) << 2)
@@ -14,10 +11,10 @@
 #define LMOD_OFFS   1
 #define RMOD_OFFS   2
 
-global char arg[] = "-c";
-global char *shell = NULL;
+static char arg[] = "-c";
+static char *shell = NULL;
 
-internal uint32_t cgevent_lrmod_flag[] =
+static uint32_t cgevent_lrmod_flag[] =
 {
     Event_Mask_Alt,     Event_Mask_LAlt,     Event_Mask_RAlt,
     Event_Mask_Shift,   Event_Mask_LShift,   Event_Mask_RShift,
@@ -25,7 +22,7 @@ internal uint32_t cgevent_lrmod_flag[] =
     Event_Mask_Control, Event_Mask_LControl, Event_Mask_RControl,
 };
 
-internal uint32_t hotkey_lrmod_flag[] =
+static uint32_t hotkey_lrmod_flag[] =
 {
     Hotkey_Flag_Alt,     Hotkey_Flag_LAlt,     Hotkey_Flag_RAlt,
     Hotkey_Flag_Shift,   Hotkey_Flag_LShift,   Hotkey_Flag_RShift,
@@ -33,7 +30,7 @@ internal uint32_t hotkey_lrmod_flag[] =
     Hotkey_Flag_Control, Hotkey_Flag_LControl, Hotkey_Flag_RControl,
 };
 
-internal bool
+static bool
 compare_lr_mod(struct hotkey *a, struct hotkey *b, int mod)
 {
     bool result = has_flags(a, hotkey_lrmod_flag[mod])
@@ -46,13 +43,13 @@ compare_lr_mod(struct hotkey *a, struct hotkey *b, int mod)
     return result;
 }
 
-internal bool
+static bool
 compare_fn(struct hotkey *a, struct hotkey *b)
 {
     return has_flags(a, Hotkey_Flag_Fn) == has_flags(b, Hotkey_Flag_Fn);
 }
 
-internal bool
+static bool
 compare_nx(struct hotkey *a, struct hotkey *b)
 {
     return has_flags(a, Hotkey_Flag_NX) == has_flags(b, Hotkey_Flag_NX);
@@ -97,7 +94,7 @@ unsigned long hash_string(char *key)
     return hash;
 }
 
-internal inline void
+static inline void
 fork_and_exec(char *command)
 {
     int cpid = fork();
@@ -109,13 +106,13 @@ fork_and_exec(char *command)
     }
 }
 
-internal inline void
+static inline void
 passthrough(struct hotkey *hotkey, uint32_t *capture)
 {
     *capture |= HOTKEY_PASSTHROUGH((int)has_flags(hotkey, Hotkey_Flag_Passthrough));
 }
 
-internal inline struct hotkey *
+static inline struct hotkey *
 find_hotkey(struct mode *mode, struct hotkey *hotkey, uint32_t *capture)
 {
     struct hotkey *result = table_find(&mode->hotkey_map, hotkey);
@@ -123,7 +120,7 @@ find_hotkey(struct mode *mode, struct hotkey *hotkey, uint32_t *capture)
     return result;
 }
 
-internal inline bool
+static inline bool
 should_capture_hotkey(uint32_t capture)
 {
     if ((capture & HOTKEY_FOUND)) {
@@ -143,7 +140,7 @@ should_capture_hotkey(uint32_t capture)
     return (capture & MODE_CAPTURE(1));
 }
 
-internal inline char *
+static inline char *
 find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct carbon_event *carbon)
 {
     char *result = NULL;
@@ -238,7 +235,7 @@ void free_blacklist(struct table *blacklst)
     }
 }
 
-internal void
+static void
 cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags eventflags, uint32_t *flags, int mod)
 {
     enum osx_event_mask mask  = cgevent_lrmod_flag[mod];
@@ -255,7 +252,7 @@ cgevent_lrmod_flag_to_hotkey_lrmod_flag(CGEventFlags eventflags, uint32_t *flags
     }
 }
 
-internal uint32_t
+static uint32_t
 cgevent_flags_to_hotkey_flags(uint32_t eventflags)
 {
     uint32_t flags = 0;
