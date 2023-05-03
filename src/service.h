@@ -2,6 +2,7 @@
 #define SERVICE_H
 
 #include <spawn.h>
+#include <sys/stat.h>
 
 #define MAXLEN 512
 
@@ -94,10 +95,46 @@ static void populate_plist(char *skhd_plist, int size)
     snprintf(skhd_plist, size, _SKHD_PLIST, exe_path, path_env, user, user);
 }
 
+
+static inline bool directory_exists(char *filename)
+{
+    struct stat buffer;
+
+    if (stat(filename, &buffer) != 0) {
+        return false;
+    }
+
+    return S_ISDIR(buffer.st_mode);
+}
+
+static inline void ensure_directory_exists(char *skhd_plist_path)
+{
+    //
+    // NOTE(koekeishiya): Temporarily remove filename.
+    // We know the filepath will contain a slash, as
+    // it is controlled by us, so don't bother checking
+    // the result..
+    //
+
+    char *last_slash = strrchr(skhd_plist_path, '/');
+    *last_slash = '\0';
+
+    if (!directory_exists(skhd_plist_path)) {
+        mkdir(skhd_plist_path, 0755);
+    }
+
+    //
+    // NOTE(koekeishiya): Restore original filename.
+    //
+
+    *last_slash = '/';
+}
+
 static int service_install_internal(char *skhd_plist_path)
 {
     char skhd_plist[4096];
     populate_plist(skhd_plist, sizeof(skhd_plist));
+    ensure_directory_exists(skhd_plist_path);
 
     FILE *handle = fopen(skhd_plist_path, "w");
     if (!handle) return 1;
