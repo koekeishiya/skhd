@@ -518,8 +518,8 @@ int main(int argc, char **argv)
 
     NSApplicationLoad();
     notify_init();
-    CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
-    CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
+    // CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
+    // CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
 
     CFRunLoopRun();
     return EXIT_SUCCESS;
