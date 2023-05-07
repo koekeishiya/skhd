@@ -10,9 +10,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#define internal static
-
-internal struct mode *
+static struct mode *
 find_or_init_default_mode(struct parser *parser)
 {
     struct mode *default_mode;
@@ -36,7 +34,7 @@ find_or_init_default_mode(struct parser *parser)
     return default_mode;
 }
 
-internal char *
+static char *
 read_file(const char *file)
 {
     unsigned length;
@@ -56,7 +54,7 @@ read_file(const char *file)
     return buffer;
 }
 
-internal char *
+static char *
 copy_string_count(char *s, int length)
 {
     char *result = malloc(length + 1);
@@ -65,7 +63,7 @@ copy_string_count(char *s, int length)
     return result;
 }
 
-internal uint32_t
+static uint32_t
 keycode_from_hex(char *hex)
 {
     uint32_t result;
@@ -73,7 +71,7 @@ keycode_from_hex(char *hex)
     return result;
 }
 
-internal uint8_t
+static uint8_t
 button_number_from_name(char *name)
 {
     uint8_t result;
@@ -81,7 +79,7 @@ button_number_from_name(char *name)
     return result;
 }
 
-internal void
+static void
 parse_command(struct parser *parser, struct hotkey *hotkey)
 {
     struct token command = parser_previous(parser);
@@ -90,7 +88,7 @@ parse_command(struct parser *parser, struct hotkey *hotkey)
     buf_push(hotkey->command, result);
 }
 
-internal void
+static void
 parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
 {
     if (parser_match(parser, Token_String)) {
@@ -129,7 +127,7 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
     }
 }
 
-internal void
+static void
 parse_activate(struct parser *parser, struct hotkey *hotkey)
 {
     parse_command(parser, hotkey);
@@ -140,7 +138,7 @@ parse_activate(struct parser *parser, struct hotkey *hotkey)
     }
 }
 
-internal uint32_t
+static uint32_t
 parse_key_hex(struct parser *parser)
 {
     struct token key = parser_previous(parser);
@@ -151,7 +149,7 @@ parse_key_hex(struct parser *parser)
     return keycode;
 }
 
-internal uint32_t
+static uint32_t
 parse_key(struct parser *parser)
 {
     uint32_t keycode;
@@ -163,7 +161,7 @@ parse_key(struct parser *parser)
 
 #define KEY_HAS_IMPLICIT_FN_MOD  4
 #define KEY_HAS_IMPLICIT_NX_MOD  35
-internal uint32_t literal_keycode_value[] =
+static uint32_t literal_keycode_value[] =
 {
     kVK_Return,     kVK_Tab,           kVK_Space,
     kVK_Delete,     kVK_Escape,        kVK_ForwardDelete,
@@ -184,7 +182,7 @@ internal uint32_t literal_keycode_value[] =
     NX_KEYTYPE_BRIGHTNESS_DOWN, NX_KEYTYPE_ILLUMINATION_UP, NX_KEYTYPE_ILLUMINATION_DOWN
 };
 
-internal inline void
+static inline void
 handle_implicit_literal_flags(struct hotkey *hotkey, int literal_index)
 {
     if ((literal_index > KEY_HAS_IMPLICIT_FN_MOD) &&
@@ -195,7 +193,7 @@ handle_implicit_literal_flags(struct hotkey *hotkey, int literal_index)
     }
 }
 
-internal void
+static void
 parse_key_literal(struct parser *parser, struct hotkey *hotkey)
 {
     struct token key = parser_previous(parser);
@@ -209,7 +207,7 @@ parse_key_literal(struct parser *parser, struct hotkey *hotkey)
     }
 }
 
-internal uint8_t
+static uint8_t
 parse_button(struct parser *parser)
 {
     struct token button = parser_previous(parser);
@@ -224,7 +222,7 @@ parse_button(struct parser *parser)
     return button_number;
 }
 
-internal enum hotkey_flag modifier_flags_value[] =
+static enum hotkey_flag modifier_flags_value[] =
 {
     Hotkey_Flag_Alt,        Hotkey_Flag_LAlt,       Hotkey_Flag_RAlt,
     Hotkey_Flag_Shift,      Hotkey_Flag_LShift,     Hotkey_Flag_RShift,
@@ -233,7 +231,7 @@ internal enum hotkey_flag modifier_flags_value[] =
     Hotkey_Flag_Fn,         Hotkey_Flag_Hyper,      Hotkey_Flag_Meh,
 };
 
-internal uint32_t
+static uint32_t
 parse_modifier(struct parser *parser)
 {
     struct token modifier = parser_previous(parser);
@@ -258,7 +256,7 @@ parse_modifier(struct parser *parser)
     return flags;
 }
 
-internal void
+static void
 parse_mode(struct parser *parser, struct hotkey *hotkey)
 {
     struct token identifier = parser_previous(parser);
@@ -286,7 +284,7 @@ parse_mode(struct parser *parser, struct hotkey *hotkey)
     }
 }
 
-internal struct hotkey *
+static struct hotkey *
 parse_hotkey(struct parser *parser)
 {
     struct hotkey *hotkey = malloc(sizeof(struct hotkey));
@@ -368,7 +366,7 @@ err:
     return NULL;
 }
 
-internal struct mode *
+static struct mode *
 parse_mode_decl(struct parser *parser)
 {
     struct mode *mode = malloc(sizeof(struct mode));

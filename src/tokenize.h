@@ -1,9 +1,7 @@
 #ifndef SKHD_TOKENIZE_H
 #define SKHD_TOKENIZE_H
 
-#define global static
-
-global const char *modifier_flags_str[] =
+static const char *modifier_flags_str[] =
 {
     "alt",   "lalt",    "ralt",
     "shift", "lshift",  "rshift",
@@ -12,7 +10,7 @@ global const char *modifier_flags_str[] =
     "fn",    "hyper",   "meh",
 };
 
-global const char *literal_keycode_str[] =
+static const char *literal_keycode_str[] =
 {
     "return",          "tab",             "space",
     "backspace",       "escape",          "delete",
@@ -33,7 +31,7 @@ global const char *literal_keycode_str[] =
     "brightness_down", "illumination_up", "illumination_down"
 };
 
-global const char *mouse_button_str[] =
+static const char *mouse_button_str[] =
 {
     "mouse_left",      "mouse_right",     "mouse_center",
     "m3",              "m4",              "m5",
@@ -47,9 +45,6 @@ global const char *mouse_button_str[] =
     "m27",             "m28",             "m29",
     "m30",             "m31"
 };
-
-#undef global
-
 enum token_type
 {
     Token_Identifier,

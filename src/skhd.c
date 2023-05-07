@@ -27,6 +27,7 @@
 #include "parse.h"
 #include "hotkey.h"
 #include "synthesize.h"
+#include "service.h"
 
 #include "hotload.c"
 #include "event_tap.c"
@@ -47,28 +48,34 @@ extern bool CGSIsSecureEventInputSet(void);
 typedef GLOBAL_CONNECTION_CALLBACK(global_connection_callback);
 extern CGError CGSRegisterNotifyProc(void *handler, uint32_t type, void *context);
 
-#define internal static
-#define global   static
-
 #define SKHD_CONFIG_FILE ".skhdrc"
 #define SKHD_PIDFILE_FMT "/tmp/skhd_%s.pid"
 
-global unsigned major_version = 0;
-global unsigned minor_version = 3;
-global unsigned patch_version = 5;
+#define VERSION_OPT_LONG        "--version"
+#define VERSION_OPT_SHRT        "-v"
 
-global struct carbon_event carbon;
-global struct event_tap event_tap;
-global struct hotloader hotloader;
-global struct mode *current_mode;
-global struct table mode_map;
-global struct table blacklst;
-global bool thwart_hotloader;
-global char config_file[4096];
+#define SERVICE_INSTALL_OPT     "--install-service"
+#define SERVICE_UNINSTALL_OPT   "--uninstall-service"
+#define SERVICE_START_OPT       "--start-service"
+#define SERVICE_RESTART_OPT     "--restart-service"
+#define SERVICE_STOP_OPT        "--stop-service"
 
-internal HOTLOADER_CALLBACK(config_handler);
+#define MAJOR  0
+#define MINOR  3
+#define PATCH  7
 
-internal void
+static struct carbon_event carbon;
+static struct event_tap event_tap;
+static struct hotloader hotloader;
+static struct mode *current_mode;
+static struct table mode_map;
+static struct table blacklst;
+static bool thwart_hotloader;
+static char config_file[4096];
+
+static HOTLOADER_CALLBACK(config_handler);
+
+static void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
@@ -100,7 +107,7 @@ parse_config_helper(char *absolutepath)
     current_mode = table_find(&mode_map, "default");
 }
 
-internal HOTLOADER_CALLBACK(config_handler)
+static HOTLOADER_CALLBACK(config_handler)
 {
     BEGIN_TIMED_BLOCK("hotload_config");
     debug("skhd: config-file has been modified.. reloading config\n");
@@ -110,7 +117,7 @@ internal HOTLOADER_CALLBACK(config_handler)
     END_TIMED_BLOCK();
 }
 
-internal CF_NOTIFICATION_CALLBACK(keymap_handler)
+static CF_NOTIFICATION_CALLBACK(keymap_handler)
 {
     BEGIN_TIMED_BLOCK("keymap_changed");
     if (initialize_keycode_map()) {
@@ -122,7 +129,7 @@ internal CF_NOTIFICATION_CALLBACK(keymap_handler)
     END_TIMED_BLOCK();
 }
 
-internal EVENT_TAP_CALLBACK(key_observer_handler)
+static EVENT_TAP_CALLBACK(key_observer_handler)
 {
     switch (type) {
     case kCGEventTapDisabledByTimeout:
@@ -157,7 +164,7 @@ internal EVENT_TAP_CALLBACK(key_observer_handler)
     return event;
 }
 
-internal EVENT_TAP_CALLBACK(key_handler)
+static EVENT_TAP_CALLBACK(key_handler)
 {
     switch (type) {
     case kCGEventTapDisabledByTimeout:
@@ -194,8 +201,7 @@ internal EVENT_TAP_CALLBACK(key_handler)
     return event;
 }
 
-internal void
-sigusr1_handler(int signal)
+static void sigusr1_handler(int signal)
 {
     BEGIN_TIMED_BLOCK("sigusr1");
     debug("skhd: SIGUSR1 received.. reloading config\n");
@@ -205,8 +211,7 @@ sigusr1_handler(int signal)
     END_TIMED_BLOCK();
 }
 
-internal pid_t
-read_pid_file(void)
+static pid_t read_pid_file(void)
 {
     char pid_file[255] = {};
     pid_t pid = 0;
@@ -233,8 +238,7 @@ read_pid_file(void)
     return pid;
 }
 
-internal void
-create_pid_file(void)
+static void create_pid_file(void)
 {
     char pid_file[255] = {};
     pid_t pid = getpid();
@@ -271,15 +275,44 @@ create_pid_file(void)
     debug("skhd: successfully created pid-file..\n");
 }
 
-internal bool
-parse_arguments(int argc, char **argv)
+static inline bool string_equals(const char *a, const char *b)
 {
+    return a && b && strcmp(a, b) == 0;
+}
+
+static bool parse_arguments(int argc, char **argv)
+{
+    if ((string_equals(argv[1], VERSION_OPT_LONG)) ||
+        (string_equals(argv[1], VERSION_OPT_SHRT))) {
+        fprintf(stdout, "skhd-v%d.%d.%d\n", MAJOR, MINOR, PATCH);
+        exit(EXIT_SUCCESS);
+    }
+
+    if (string_equals(argv[1], SERVICE_INSTALL_OPT)) {
+        exit(service_install());
+    }
+
+    if (string_equals(argv[1], SERVICE_UNINSTALL_OPT)) {
+        exit(service_uninstall());
+    }
+
+    if (string_equals(argv[1], SERVICE_START_OPT)) {
+        exit(service_start());
+    }
+
+    if (string_equals(argv[1], SERVICE_RESTART_OPT)) {
+        exit(service_restart());
+    }
+
+    if (string_equals(argv[1], SERVICE_STOP_OPT)) {
+        exit(service_stop());
+    }
+
     int option;
     const char *short_option = "VPvc:k:t:rho";
     struct option long_option[] = {
         { "verbose", no_argument, NULL, 'V' },
         { "profile", no_argument, NULL, 'P' },
-        { "version", no_argument, NULL, 'v' },
         { "config", required_argument, NULL, 'c' },
         { "no-hotload", no_argument, NULL, 'h' },
         { "key", required_argument, NULL, 'k' },
@@ -296,10 +329,6 @@ parse_arguments(int argc, char **argv)
         } break;
         case 'P': {
             profile = true;
-        } break;
-        case 'v': {
-            printf("skhd version %d.%d.%d\n", major_version, minor_version, patch_version);
-            return true;
         } break;
         case 'c': {
             snprintf(config_file, sizeof(config_file), "%s", optarg);
@@ -335,8 +364,7 @@ parse_arguments(int argc, char **argv)
     return false;
 }
 
-internal bool
-check_privileges(void)
+static bool check_privileges(void)
 {
     bool result;
     const void *keys[] = { kAXTrustedCheckOptionPrompt };
@@ -354,8 +382,7 @@ check_privileges(void)
     return result;
 }
 
-internal inline bool
-file_exists(char *filename)
+static inline bool file_exists(char *filename)
 {
     struct stat buffer;
 
@@ -370,8 +397,7 @@ file_exists(char *filename)
     return true;
 }
 
-internal bool
-get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
+static bool get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
 {
     char *xdg_home = getenv("XDG_CONFIG_HOME");
     if (xdg_home && *xdg_home) {
@@ -389,8 +415,7 @@ get_config_file(char *restrict filename, char *restrict buffer, int buffer_size)
     return file_exists(buffer);
 }
 
-internal char *
-secure_keyboard_entry_process_info(pid_t *pid)
+static char *secure_keyboard_entry_process_info(pid_t *pid)
 {
     char *process_name = NULL;
 
@@ -407,8 +432,7 @@ secure_keyboard_entry_process_info(pid_t *pid)
     return process_name;
 }
 
-internal void
-dump_secure_keyboard_entry_process_info(void)
+static void dump_secure_keyboard_entry_process_info(void)
 {
     pid_t pid;
     char *process_name = secure_keyboard_entry_process_info(&pid);
@@ -509,8 +533,8 @@ int main(int argc, char **argv)
 
     NSApplicationLoad();
     notify_init();
-    CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
-    CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
+    // CGSRegisterNotifyProc((void*)connection_handler, 752, NULL);
+    // CGSRegisterNotifyProc((void*)connection_handler, 753, NULL);
 
     CFRunLoopRun();
     return EXIT_SUCCESS;

@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define internal static
-
 #define FSEVENT_CALLBACK(name) void name(ConstFSEventStreamRef stream,\
                                          void *context,\
                                          size_t file_count,\
@@ -42,14 +40,14 @@ struct watched_entry
     };
 };
 
-internal inline bool
+static inline bool
 same_string(const char *a, const char *b)
 {
     bool result = a && b && strcmp(a, b) == 0;
     return result;
 }
 
-internal char *
+static char *
 copy_string(const char *s)
 {
     unsigned length = strlen(s);
@@ -59,7 +57,7 @@ copy_string(const char *s)
     return result;
 }
 
-internal char *
+static char *
 file_directory(char *file)
 {
     char *last_slash = strrchr(file, '/');
@@ -69,7 +67,7 @@ file_directory(char *file)
     return directory;
 }
 
-internal char *
+static char *
 file_name(char *file)
 {
     char *last_slash = strrchr(file, '/');
@@ -77,7 +75,7 @@ file_name(char *file)
     return name;
 }
 
-internal char *
+static char *
 resolve_symlink(const char *file)
 {
     struct stat buffer;
@@ -97,7 +95,7 @@ resolve_symlink(const char *file)
     return result;
 }
 
-internal enum watch_kind
+static enum watch_kind
 resolve_watch_kind(char *file)
 {
     struct stat buffer;
@@ -116,7 +114,7 @@ resolve_watch_kind(char *file)
     return WATCH_KIND_INVALID;
 }
 
-internal char *
+static char *
 same_catalog(char *absolutepath, struct watched_catalog *catalog_info)
 {
     char *last_slash = strrchr(absolutepath, '/');
@@ -141,14 +139,14 @@ same_catalog(char *absolutepath, struct watched_catalog *catalog_info)
     return filename;
 }
 
-internal inline bool
+static inline bool
 same_file(char *absolutepath, struct watched_file *file_info)
 {
     bool result = same_string(absolutepath, file_info->absolutepath);
     return result;
 }
 
-internal FSEVENT_CALLBACK(hotloader_handler)
+static FSEVENT_CALLBACK(hotloader_handler)
 {
     /* NOTE(koekeishiya): We sometimes get two events upon file save. */
     struct hotloader *hotloader = (struct hotloader *) context;
@@ -178,7 +176,7 @@ internal FSEVENT_CALLBACK(hotloader_handler)
     }
 }
 
-internal inline void
+static inline void
 hotloader_add_watched_entry(struct hotloader *hotloader, struct watched_entry entry)
 {
     if (!hotloader->watch_list) {

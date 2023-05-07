@@ -1,10 +1,8 @@
 #include "carbon.h"
 
-#define internal static
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
-internal inline char *
+static inline char *
 find_process_name_for_psn(ProcessSerialNumber *psn)
 {
     CFStringRef process_name_ref;
@@ -25,7 +23,7 @@ find_process_name_for_pid(pid_t pid)
     return find_process_name_for_psn(&psn);
 }
 
-internal inline char *
+static inline char *
 find_active_process_name(void)
 {
     ProcessSerialNumber psn;
@@ -34,7 +32,7 @@ find_active_process_name(void)
 }
 #pragma clang diagnostic pop
 
-internal OSStatus
+static OSStatus
 carbon_event_handler(EventHandlerCallRef ref, EventRef event, void *context)
 {
     struct carbon_event *carbon = (struct carbon_event *) context;

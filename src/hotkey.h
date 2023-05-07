@@ -79,28 +79,24 @@ struct hotkey
     struct mode **mode_list;
 };
 
-#define internal static
-
-internal inline void
+static inline void
 add_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags |= flag;
 }
 
-internal inline bool
+static inline bool
 has_flags(struct hotkey *hotkey, uint32_t flag)
 {
     bool result = hotkey->flags & flag;
     return result;
 }
 
-internal inline void
+static inline void
 clear_flags(struct hotkey *hotkey, uint32_t flag)
 {
     hotkey->flags &= ~flag;
 }
-
-#undef internal
 
 bool compare_string(char *a, char *b);
 unsigned long hash_string(char *key);

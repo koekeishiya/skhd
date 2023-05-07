@@ -19,10 +19,7 @@
 #define END_TIMED_BLOCK() \
     if (profile) end_timing(&timing)
 
-#define internal static
-#define global   static
-
-global bool profile;
+static bool profile;
 
 struct timing_info
 {
@@ -35,7 +32,7 @@ struct timing_info
 void begin_timing(struct timing_info *timing, char *note);
 void end_timing(struct timing_info *timing);
 
-internal inline uint64_t
+static inline uint64_t
 macos_get_wall_clock(void)
 {
     return mach_absolute_time();
@@ -51,14 +48,14 @@ static inline uint64_t macos_get_nanoseconds_elapsed(uint64_t start, uint64_t en
 }
 #pragma clang diagnostic pop
 
-internal inline double
+static inline double
 macos_get_milliseconds_elapsed(uint64_t start, uint64_t end)
 {
     uint64_t ns = macos_get_nanoseconds_elapsed(start, end);
     return (double)(ns / 1000000.0);
 }
 
-internal inline double
+static inline double
 macos_get_seconds_elapsed(uint64_t start, uint64_t end)
 {
     uint64_t ns = macos_get_nanoseconds_elapsed(start, end);
@@ -79,8 +76,5 @@ void end_timing(struct timing_info *timing) {
         printf("%6.4fms\n", timing->ms);
     }
 }
-
-#undef internal
-#undef global
 
 #endif
