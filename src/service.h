@@ -8,7 +8,7 @@
 
 #define _PATH_LAUNCHCTL   "/bin/launchctl"
 #define _NAME_SKHD_PLIST "com.koekeishiya.skhd"
-#define _PATH_SKHD_PLIST "/Users/%s/Library/LaunchAgents/"_NAME_SKHD_PLIST".plist"
+#define _PATH_SKHD_PLIST "%s/Library/LaunchAgents/"_NAME_SKHD_PLIST".plist"
 
 #define _SKHD_PLIST \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
@@ -64,14 +64,32 @@ static int safe_exec(char *const argv[])
     }
 }
 
-static void populate_plist_path(char *skhd_plist_path, int size)
+static inline char *cfstring_copy(CFStringRef string)
 {
-    char *user = getenv("USER");
-    if (!user) {
-        error("skhd: 'env USER' not set! abort..\n");
+    CFIndex num_bytes = CFStringGetMaximumSizeForEncoding(CFStringGetLength(string), kCFStringEncodingUTF8);
+    char *result = malloc(num_bytes + 1);
+    if (!result) return NULL;
+
+    if (!CFStringGetCString(string, result, num_bytes + 1, kCFStringEncodingUTF8)) {
+        free(result);
+        result = NULL;
     }
 
-    snprintf(skhd_plist_path, size, _PATH_SKHD_PLIST, user);
+    return result;
+}
+
+extern CFURLRef CFCopyHomeDirectoryURLForUser(void *user);
+static void populate_plist_path(char *skhd_plist_path, int size)
+{
+    CFURLRef homeurl_ref = CFCopyHomeDirectoryURLForUser(NULL);
+    CFStringRef home_ref = homeurl_ref ? CFURLCopyFileSystemPath(homeurl_ref, kCFURLPOSIXPathStyle) : NULL;
+    char *home = home_ref ? cfstring_copy(home_ref) : NULL;
+
+    if (!home) {
+        error("skhd: unable to retrieve home directory! abort..\n");
+    }
+
+    snprintf(skhd_plist_path, size, _PATH_SKHD_PLIST, home);
 }
 
 static void populate_plist(char *skhd_plist, int size)
