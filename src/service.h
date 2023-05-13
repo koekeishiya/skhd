@@ -8,7 +8,7 @@
 
 #define _PATH_LAUNCHCTL   "/bin/launchctl"
 #define _NAME_SKHD_PLIST "com.koekeishiya.skhd"
-#define _PATH_SKHD_PLIST "/Users/%s/Library/LaunchAgents/"_NAME_SKHD_PLIST".plist"
+#define _PATH_SKHD_PLIST "%s/Library/LaunchAgents/"_NAME_SKHD_PLIST".plist"
 
 #define _SKHD_PLIST \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
@@ -66,12 +66,12 @@ static int safe_exec(char *const argv[])
 
 static void populate_plist_path(char *skhd_plist_path, int size)
 {
-    char *user = getenv("USER");
-    if (!user) {
-        error("skhd: 'env USER' not set! abort..\n");
+    char *home = getenv("HOME");
+    if (!home) {
+        error("skhd: 'env HOME' not set! abort..\n");
     }
 
-    snprintf(skhd_plist_path, size, _PATH_SKHD_PLIST, user);
+    snprintf(skhd_plist_path, size, _PATH_SKHD_PLIST, home);
 }
 
 static void populate_plist(char *skhd_plist, int size)
