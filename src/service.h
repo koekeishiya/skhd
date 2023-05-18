@@ -79,7 +79,7 @@ static inline char *cfstring_copy(CFStringRef string)
 }
 
 extern CFURLRef CFCopyHomeDirectoryURLForUser(void *user);
-static void populate_plist_path(char *skhd_plist_path, int size)
+static char *populate_plist_path(void)
 {
     CFURLRef homeurl_ref = CFCopyHomeDirectoryURLForUser(NULL);
     CFStringRef home_ref = homeurl_ref ? CFURLCopyFileSystemPath(homeurl_ref, kCFURLPOSIXPathStyle) : NULL;
@@ -89,10 +89,19 @@ static void populate_plist_path(char *skhd_plist_path, int size)
         error("skhd: unable to retrieve home directory! abort..\n");
     }
 
-    snprintf(skhd_plist_path, size, _PATH_SKHD_PLIST, home);
+    int size = strlen(_PATH_SKHD_PLIST)-2 + strlen(home) + 1;
+    char *result = malloc(size);
+    if (!result) {
+        error("skhd: could not allocate memory for plist path! abort..\n");
+    }
+
+    memset(result, 0, size);
+    snprintf(result, size, _PATH_SKHD_PLIST, home);
+
+    return result;
 }
 
-static void populate_plist(char *skhd_plist, int size)
+static char *populate_plist(int *length)
 {
     char *user = getenv("USER");
     if (!user) {
@@ -110,7 +119,17 @@ static void populate_plist(char *skhd_plist, int size)
         error("skhd: unable to retrieve path of executable! abort..\n");
     }
 
-    snprintf(skhd_plist, size, _SKHD_PLIST, exe_path, path_env, user, user);
+    int size = strlen(_SKHD_PLIST)-8 + strlen(exe_path) + strlen(path_env) + (2*strlen(user)) + 1;
+    char *result = malloc(size);
+    if (!result) {
+        error("skhd: could not allocate memory for plist contents! abort..\n");
+    }
+
+    memset(result, 0, size);
+    snprintf(result, size, _SKHD_PLIST, exe_path, path_env, user, user);
+    *length = size-1;
+
+    return result;
 }
 
 
@@ -150,14 +169,14 @@ static inline void ensure_directory_exists(char *skhd_plist_path)
 
 static int service_install_internal(char *skhd_plist_path)
 {
-    char skhd_plist[4096];
-    populate_plist(skhd_plist, sizeof(skhd_plist));
+    int skhd_plist_length;
+    char *skhd_plist = populate_plist(&skhd_plist_length);
     ensure_directory_exists(skhd_plist_path);
 
     FILE *handle = fopen(skhd_plist_path, "w");
     if (!handle) return 1;
 
-    size_t bytes = fwrite(skhd_plist, strlen(skhd_plist), 1, handle);
+    size_t bytes = fwrite(skhd_plist, skhd_plist_length, 1, handle);
     int result = bytes == 1 ? 0 : 1;
     fclose(handle);
 
@@ -166,8 +185,7 @@ static int service_install_internal(char *skhd_plist_path)
 
 static int service_install(void)
 {
-    char skhd_plist_path[MAXLEN];
-    populate_plist_path(skhd_plist_path, sizeof(skhd_plist_path));
+    char *skhd_plist_path = populate_plist_path();
 
     if (file_exists(skhd_plist_path)) {
         error("skhd: service file '%s' is already installed! abort..\n", skhd_plist_path);
@@ -178,8 +196,7 @@ static int service_install(void)
 
 static int service_uninstall(void)
 {
-    char skhd_plist_path[MAXLEN];
-    populate_plist_path(skhd_plist_path, sizeof(skhd_plist_path));
+    char *skhd_plist_path = populate_plist_path();
 
     if (!file_exists(skhd_plist_path)) {
         error("skhd: service file '%s' is not installed! abort..\n", skhd_plist_path);
@@ -190,8 +207,7 @@ static int service_uninstall(void)
 
 static int service_start(void)
 {
-    char skhd_plist_path[MAXLEN];
-    populate_plist_path(skhd_plist_path, sizeof(skhd_plist_path));
+    char *skhd_plist_path = populate_plist_path();
 
     if (!file_exists(skhd_plist_path)) {
         warn("skhd: service file '%s' is not installed! attempting installation..\n", skhd_plist_path);
@@ -208,8 +224,7 @@ static int service_start(void)
 
 static int service_restart(void)
 {
-    char skhd_plist_path[MAXLEN];
-    populate_plist_path(skhd_plist_path, sizeof(skhd_plist_path));
+    char *skhd_plist_path = populate_plist_path();
 
     if (!file_exists(skhd_plist_path)) {
         error("skhd: service file '%s' is not installed! abort..\n", skhd_plist_path);
@@ -224,8 +239,7 @@ static int service_restart(void)
 
 static int service_stop(void)
 {
-    char skhd_plist_path[MAXLEN];
-    populate_plist_path(skhd_plist_path, sizeof(skhd_plist_path));
+    char *skhd_plist_path = populate_plist_path();
 
     if (!file_exists(skhd_plist_path)) {
         error("skhd: service file '%s' is not installed! abort..\n", skhd_plist_path);
