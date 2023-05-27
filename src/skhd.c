@@ -62,7 +62,7 @@ extern CGError CGSRegisterNotifyProc(void *handler, uint32_t type, void *context
 
 #define MAJOR  0
 #define MINOR  3
-#define PATCH  8
+#define PATCH  9
 
 static struct carbon_event carbon;
 static struct event_tap event_tap;
