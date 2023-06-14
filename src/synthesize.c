@@ -73,7 +73,7 @@ void synthesize_key(char *key_string)
     CGEnableEventStateCombining(false);
 
     synthesize_modifiers(hotkey, true);
-    if (hotkey->button == -1) {
+    if (hotkey->button == (uint8_t)-1) {
         create_and_post_keyevent(hotkey->key, true);
         create_and_post_keyevent(hotkey->key, false);
     } else {
