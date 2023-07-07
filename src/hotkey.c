@@ -219,10 +219,8 @@ next:;
         free(mode);
     }
 
-    if (mode_count) {
-        free(modes);
-        buf_free(freed_pointers);
-    }
+    free(modes);
+    buf_free(freed_pointers);
 }
 
 void free_blacklist(struct table *blacklst)
@@ -230,9 +228,21 @@ void free_blacklist(struct table *blacklst)
     int count;
     void **items = table_reset(blacklst, &count);
     for (int index = 0; index < count; ++index) {
-        char *item = (char *) items[index];
-        free(item);
+        free(items[index]);
     }
+
+    free(items);
+}
+
+void free_alias_map(struct table *alias_map)
+{
+    int count;
+    void **items = table_reset(alias_map, &count);
+    for (int index = 0; index < count; ++index) {
+        free(items[index]);
+    }
+
+    free(items);
 }
 
 static void

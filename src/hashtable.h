@@ -88,17 +88,27 @@ void *table_find(struct table *table, void *key)
     return bucket ? bucket->value : NULL;
 }
 
-void table_add(struct table *table, void *key, void *value)
+void table_newkeyvalue(struct table *table, void *key, void *value, bool do_replace)
 {
     struct bucket **bucket = table_get_bucket(table, key);
     if (*bucket) {
-        if (!(*bucket)->value) {
+        if (do_replace || !(*bucket)->value) {
             (*bucket)->value = value;
         }
     } else {
         *bucket = table_new_bucket(key, value);
         ++table->count;
     }
+}
+
+void table_add(struct table *table, void *key, void *value)
+{
+    table_newkeyvalue(table, key, value, false);
+}
+
+void table_replace(struct table *table, void *key, void *value)
+{
+    table_newkeyvalue(table, key, value, true);
 }
 
 void *table_remove(struct table *table, void *key)

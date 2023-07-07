@@ -43,6 +43,7 @@ enum hotkey_flag
     Hotkey_Flag_LControl    = (1 << 10),
     Hotkey_Flag_RControl    = (1 << 11),
     Hotkey_Flag_Fn          = (1 << 12),
+    Hotkey_Flag_Modifier    = ((Hotkey_Flag_Fn << 1) - 1),
     Hotkey_Flag_Passthrough = (1 << 13),
     Hotkey_Flag_Activate    = (1 << 14),
     Hotkey_Flag_NX          = (1 << 15),
@@ -109,6 +110,7 @@ bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);
 bool find_and_exec_hotkey(struct hotkey *k, struct table *t, struct mode **m, struct carbon_event *carbon);
 void free_mode_map(struct table *mode_map);
 void free_blacklist(struct table *blacklst);
+void free_alias_map(struct table *alias_map);
 
 void init_shell(void);
 

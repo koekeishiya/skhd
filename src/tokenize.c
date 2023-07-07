@@ -218,6 +218,15 @@ get_token(struct tokenizer *tokenizer)
             token.type = Token_Command;
         }
     } break;
+    case '$': {
+        token.text = tokenizer->at;
+        token.line = tokenizer->line;
+        token.cursor = tokenizer->cursor;
+
+        eat_identifier(tokenizer);
+        token.length = tokenizer->at - token.text;
+        token.type = Token_Alias;
+    } break;
     default:  {
         if (c == '0' && *tokenizer->at == 'x') {
             advance(tokenizer);

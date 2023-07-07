@@ -70,6 +70,7 @@ static struct hotloader hotloader;
 static struct mode *current_mode;
 static struct table mode_map;
 static struct table blacklst;
+static struct table alias_map;
 static bool thwart_hotloader;
 static char config_file[4096];
 
@@ -79,7 +80,7 @@ static void
 parse_config_helper(char *absolutepath)
 {
     struct parser parser;
-    if (parser_init(&parser, &mode_map, &blacklst, absolutepath)) {
+    if (parser_init(&parser, &mode_map, &blacklst, &alias_map, absolutepath)) {
         if (!thwart_hotloader) {
             hotloader_end(&hotloader);
             hotloader_add_file(&hotloader, absolutepath);
@@ -107,12 +108,18 @@ parse_config_helper(char *absolutepath)
     current_mode = table_find(&mode_map, "default");
 }
 
+static void free_tables()
+{
+    free_mode_map(&mode_map);
+    free_blacklist(&blacklst);
+    free_alias_map(&alias_map);
+}
+
 static HOTLOADER_CALLBACK(config_handler)
 {
     BEGIN_TIMED_BLOCK("hotload_config");
     debug("skhd: config-file has been modified.. reloading config\n");
-    free_mode_map(&mode_map);
-    free_blacklist(&blacklst);
+    free_tables();
     parse_config_helper(config_file);
     END_TIMED_BLOCK();
 }
@@ -122,8 +129,7 @@ static CF_NOTIFICATION_CALLBACK(keymap_handler)
     BEGIN_TIMED_BLOCK("keymap_changed");
     if (initialize_keycode_map()) {
         debug("skhd: input source changed.. reloading config\n");
-        free_mode_map(&mode_map);
-        free_blacklist(&blacklst);
+        free_tables();
         parse_config_helper(config_file);
     }
     END_TIMED_BLOCK();
@@ -197,8 +203,7 @@ static void sigusr1_handler(int signal)
 {
     BEGIN_TIMED_BLOCK("sigusr1");
     debug("skhd: SIGUSR1 received.. reloading config\n");
-    free_mode_map(&mode_map);
-    free_blacklist(&blacklst);
+    free_tables();
     parse_config_helper(config_file);
     END_TIMED_BLOCK();
 }
@@ -329,7 +334,9 @@ static bool parse_arguments(int argc, char **argv)
             thwart_hotloader = true;
         } break;
         case 'k': {
-            synthesize_key(optarg);
+            if (!synthesize_key(optarg)) {
+                exit(EXIT_FAILURE);
+            }
             return true;
         } break;
         case 't': {
@@ -503,6 +510,7 @@ int main(int argc, char **argv)
     init_shell();
     table_init(&mode_map, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
     table_init(&blacklst, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
+    table_init(&alias_map, 13, (table_hash_func) hash_string, (table_compare_func) compare_string);
     END_SCOPED_TIMED_BLOCK();
 
     BEGIN_SCOPED_TIMED_BLOCK("parse_config");

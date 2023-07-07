@@ -168,6 +168,25 @@ command  = command is executed through '$SHELL -c' and
            an EOL character signifies the end of the bind.
 ```
 
+Aliases can also be used anywhere a modifier or a key is expected:
+```
+# alias as modifier
+.alias $hyper cmd + alt + ctrl
+$hyper - t : open -a Terminal.app
+
+# alias as key
+.alias $capslock 0x39
+ctrl - $capslock : open -a Notes.app
+
+# alias as mod-key
+.alias $exclamation_mark shift - 1
+$hyper - $exclamation_mark : open -a "System Preferences.app"
+
+# alias within alias
+.alias $terminal_key $hyper + shift - t
+$terminal_key : open -a Terminal.app
+```
+
 General options that configure the behaviour of **skhd**:
 ```
 # specify a file that should be included as an additional config-file.
