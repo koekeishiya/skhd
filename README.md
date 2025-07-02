@@ -1,3 +1,9 @@
+> **NOTE**: If you are having issues with skhd, or are looking for feature expansion and future development,  
+you may want to check out [this backwards compatible skhd-port](https://github.com/jackielii/skhd.zig) written in Zig by [Jackie Li](https://github.com/jackielii).  
+(I am not personally involved in this re-write.)
+
+**This repository is in maintenance mode; only critical issues that affect the core functionality of the software will be taken care of.** 
+
 **skhd** is a simple hotkey daemon for macOS that focuses on responsiveness and performance.
 Hotkeys are defined in a text file through a simple DSL. **skhd** is able to hotload its config file, meaning that hotkeys can be edited and updated live while **skhd** is running.
 
